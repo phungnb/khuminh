@@ -51,6 +51,18 @@ DATABASE_URL=... npm run db:migrate
 npm run dev
 ```
 
+## Đưa lên mạng (Vercel + Neon)
+
+1. Neon (https://neon.tech): tạo project, vùng Singapore. Vào Connection details, chọn bật **Pooled connection**, sao chép chuỗi kết nối.
+2. Vercel (https://vercel.com): Add New → Project → Import repo `khuminh`.
+3. Trước khi bấm Deploy, thêm Environment Variables:
+   - `DATABASE_URL` = chuỗi kết nối Neon ở bước 1
+   - `APP_DB_PASSWORD` = chuỗi ngẫu nhiên ít nhất 16 chữ cái/số (không ký tự đặc biệt)
+4. Deploy. Lệnh `vercel-build` tự tạo role `khuminh_app`, chạy migration, rồi build.
+5. Sau khi có tên miền, thêm `APP_URL` = `https://<tên>.vercel.app` và Redeploy để link hóa đơn dùng đúng địa chỉ.
+
+Mỗi lần đẩy code lên nhánh khác `main`, Vercel tạo một link xem trước riêng; nhánh `main` là bản chính.
+
 ## Kiểm thử
 
 ```bash

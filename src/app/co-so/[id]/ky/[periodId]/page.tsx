@@ -67,9 +67,9 @@ export default async function Page({
             <thead>
               <tr>
                 <th>Phòng</th>
-                <th>Người thuê</th>
+                <th className="hidden sm:table-cell">Người thuê</th>
                 <th className="text-right">Tổng</th>
-                <th className="text-right">Đã trả</th>
+                <th className="hidden text-right sm:table-cell">Đã trả</th>
                 <th>Trạng thái</th>
               </tr>
             </thead>
@@ -80,11 +80,12 @@ export default async function Page({
                     <Link className="font-semibold text-brand" href={`/co-so/${id}/hoa-don/${r.id}`}>
                       {r.unitCode}
                     </Link>
+                    <div className="text-xs text-stone-500 sm:hidden">{r.tenantName}</div>
                   </td>
-                  <td>{r.tenantName}</td>
+                  <td className="hidden sm:table-cell">{r.tenantName}</td>
                   <td className="text-right">{vnd(r.total)}</td>
-                  <td className="text-right">{vnd(r.paid)}</td>
-                  <td>
+                  <td className="hidden text-right sm:table-cell">{vnd(r.paid)}</td>
+                  <td className="whitespace-nowrap">
                     <Badge state={r.state}>{PAYMENT_STATE_LABEL[r.state]}</Badge>
                   </td>
                 </tr>

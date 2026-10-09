@@ -14,10 +14,24 @@ let cached: Db | null = null;
  */
 export function getDb(): Db {
   if (cached) return cached;
-  const url = process.env.DATABASE_URL_APP;
-  if (!url) throw new Error("Thiếu DATABASE_URL_APP");
-  cached = drizzle(postgres(url, { max: 10 }), { schema });
+  const url = appDatabaseUrl();
+  cached = drizzle(postgres(url, { max: 5, prepare: false }), { schema });
   return cached;
+}
+
+/**
+ * DATABASE_URL_APP nếu có; nếu không, lấy DATABASE_URL và thay tài khoản bằng
+ * khuminh_app / APP_DB_PASSWORD (cách cấu hình trên Vercel, xem README).
+ */
+function appDatabaseUrl(): string {
+  if (process.env.DATABASE_URL_APP) return process.env.DATABASE_URL_APP;
+  const base = process.env.DATABASE_URL;
+  const pw = process.env.APP_DB_PASSWORD;
+  if (!base || !pw) throw new Error("Thiếu DATABASE_URL_APP hoặc (DATABASE_URL + APP_DB_PASSWORD)");
+  const u = new URL(base);
+  u.username = "khuminh_app";
+  u.password = pw;
+  return u.toString();
 }
 
 export function setDbForTests(db: Db | null): void {
