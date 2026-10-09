@@ -7,12 +7,12 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ l
   return (
     <main className="mx-auto max-w-sm px-4 py-12">
       <h1 className="mb-1 text-2xl font-bold text-brand">KhuMình</h1>
-      <p className="mb-6 text-sm text-stone-600">Đăng nhập để quản lý khu trọ</p>
+      <p className="mb-6 text-sm text-stone-600">Chủ trọ đăng nhập bằng email, người thuê bằng số điện thoại</p>
       <Flash params={sp} />
       <form action={loginAction} className="card space-y-3">
         <div>
-          <label className="label" htmlFor="email">Email</label>
-          <input className="input" id="email" name="email" type="email" autoComplete="email" required />
+          <label className="label" htmlFor="email">Email hoặc số điện thoại</label>
+          <input className="input" id="email" name="email" autoComplete="username" required />
         </div>
         <div>
           <label className="label" htmlFor="password">Mật khẩu</label>

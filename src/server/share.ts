@@ -3,7 +3,7 @@
 
 import { createHash, randomBytes } from "node:crypto";
 import { and, asc, eq, sql } from "drizzle-orm";
-import { getDb, withOrg } from "@/db/client";
+import { getDb, withOrg, type Tx } from "@/db/client";
 import {
   invoiceAdjustments,
   invoiceLines,
@@ -64,48 +64,53 @@ export async function resolveShareLink(token: string): Promise<PublicInvoice | n
       .update(invoiceShareTokens)
       .set({ openCount: sql`${invoiceShareTokens.openCount} + 1`, lastOpenedAt: new Date() })
       .where(eq(invoiceShareTokens.tokenHash, tokenHash));
-    const [row] = await tx
-      .select({ inv: invoices, propertyName: properties.name, unitCode: units.code, property: properties })
-      .from(invoices)
-      .innerJoin(properties, eq(properties.id, invoices.propertyId))
-      .innerJoin(units, eq(units.id, invoices.unitId))
-      .where(eq(invoices.id, hit.invoice_id));
-    if (!row || row.inv.status === "draft") return null;
-    const [lines, adjustments, paidRows] = await Promise.all([
-      tx
-        .select({ description: invoiceLines.description, amount: invoiceLines.amount })
-        .from(invoiceLines)
-        .where(eq(invoiceLines.invoiceId, row.inv.id))
-        .orderBy(asc(invoiceLines.position)),
-      tx
-        .select({ reason: invoiceAdjustments.reason, amount: invoiceAdjustments.amount })
-        .from(invoiceAdjustments)
-        .where(eq(invoiceAdjustments.invoiceId, row.inv.id))
-        .orderBy(asc(invoiceAdjustments.createdAt)),
-      tx
-        .select({ sum: sql<string>`coalesce(sum(${paymentAllocations.amount}), 0)` })
-        .from(paymentAllocations)
-        .where(and(eq(paymentAllocations.invoiceId, row.inv.id))),
-    ]);
-    const paid = Number(paidRows[0]?.sum ?? 0);
-    const p = row.property;
-    const due = row.inv.total - paid;
-    const bank = p.bankBin && p.bankAccountNo ? { accountNo: p.bankAccountNo, accountName: p.bankAccountName, bankBin: p.bankBin } : null;
-    return {
-      code: row.inv.code,
-      status: row.inv.status as "issued" | "void",
-      propertyName: row.propertyName,
-      unitCode: row.unitCode,
-      dueDate: row.inv.dueDate,
-      total: row.inv.total,
-      paid,
-      lines,
-      adjustments,
-      bank,
-      qrPayload:
-        bank && due > 0 && row.inv.status === "issued"
-          ? buildVietQr({ bankBin: bank.bankBin, accountNo: bank.accountNo, amount: due, message: row.inv.code })
-          : null,
-    };
+    return loadInvoiceView(tx, hit.invoice_id);
   });
+}
+
+/** Hóa đơn đã phát hành/đã hủy ở dạng người thuê xem được; null nếu là nháp. Gọi trong withOrg. */
+export async function loadInvoiceView(tx: Tx, invoiceId: string): Promise<PublicInvoice | null> {
+  const [row] = await tx
+    .select({ inv: invoices, propertyName: properties.name, unitCode: units.code, property: properties })
+    .from(invoices)
+    .innerJoin(properties, eq(properties.id, invoices.propertyId))
+    .innerJoin(units, eq(units.id, invoices.unitId))
+    .where(eq(invoices.id, invoiceId));
+  if (!row || row.inv.status === "draft") return null;
+  const [lines, adjustments, paidRows] = await Promise.all([
+    tx
+      .select({ description: invoiceLines.description, amount: invoiceLines.amount })
+      .from(invoiceLines)
+      .where(eq(invoiceLines.invoiceId, row.inv.id))
+      .orderBy(asc(invoiceLines.position)),
+    tx
+      .select({ reason: invoiceAdjustments.reason, amount: invoiceAdjustments.amount })
+      .from(invoiceAdjustments)
+      .where(eq(invoiceAdjustments.invoiceId, row.inv.id))
+      .orderBy(asc(invoiceAdjustments.createdAt)),
+    tx
+      .select({ sum: sql<string>`coalesce(sum(${paymentAllocations.amount}), 0)` })
+      .from(paymentAllocations)
+      .where(and(eq(paymentAllocations.invoiceId, row.inv.id))),
+  ]);
+  const paid = Number(paidRows[0]?.sum ?? 0);
+  const p = row.property;
+  const due = row.inv.total - paid;
+  const bank = p.bankBin && p.bankAccountNo ? { accountNo: p.bankAccountNo, accountName: p.bankAccountName, bankBin: p.bankBin } : null;
+  return {
+    code: row.inv.code,
+    status: row.inv.status as "issued" | "void",
+    propertyName: row.propertyName,
+    unitCode: row.unitCode,
+    dueDate: row.inv.dueDate,
+    total: row.inv.total,
+    paid,
+    lines,
+    adjustments,
+    bank,
+    qrPayload:
+      bank && due > 0 && row.inv.status === "issued"
+        ? buildVietQr({ bankBin: bank.bankBin, accountNo: bank.accountNo, amount: due, message: row.inv.code })
+        : null,
+  };
 }

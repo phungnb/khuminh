@@ -1,12 +1,12 @@
 import { randomUUID } from "node:crypto";
 import Link from "next/link";
-import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { CopyBox } from "@/components/copy-box";
 import { Badge, Flash, PageTitle } from "@/components/ui";
 import { paymentState, PAYMENT_STATE_LABEL } from "@/domain/payments";
 import { dmy, vnd } from "@/lib/format";
 import { requireActor } from "@/lib/session";
+import { baseUrl } from "@/lib/url";
 import { invoiceDetail, today } from "@/server/queries";
 import {
   adjustInvoiceAction,
@@ -15,14 +15,6 @@ import {
   voidInvoiceAction,
   voidPaymentAction,
 } from "../../../actions";
-
-async function baseUrl(): Promise<string> {
-  if (process.env.APP_URL) return process.env.APP_URL.replace(/\/$/, "");
-  const h = await headers();
-  const host = h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000";
-  const proto = h.get("x-forwarded-proto") ?? "http";
-  return `${proto}://${host}`;
-}
 
 export default async function Page({
   params,

@@ -30,6 +30,7 @@ await sql.unsafe(`
   GRANT USAGE ON SCHEMA public TO khuminh_app;
   GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO khuminh_app;
   GRANT EXECUTE ON FUNCTION resolve_invoice_share(text) TO khuminh_app;
+  GRANT EXECUTE ON FUNCTION resolve_tenant_invite(text) TO khuminh_app;
 `);
 await sql.end();
 console.log("CSDL sẵn sàng");

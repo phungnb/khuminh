@@ -1,5 +1,5 @@
-// Đăng ký/đăng nhập chủ trọ bằng email + mật khẩu; phiên lưu băm token trong DB.
-// Đăng nhập người thuê (Google/Zalo/OTP) làm ở bước sau.
+// Đăng ký/đăng nhập: chủ trọ dùng email, người thuê dùng số điện thoại (tạo qua link mời,
+// xem tenant.ts). Mật khẩu băm scrypt; phiên lưu băm token trong DB.
 
 import { createHash, randomBytes, scrypt as scryptCb, timingSafeEqual } from "node:crypto";
 import { promisify } from "node:util";
@@ -33,6 +33,14 @@ function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
 }
 
+/** Số di động Việt Nam về dạng 0xxxxxxxxx; null nếu không hợp lệ. */
+export function normalizePhone(raw: string): string | null {
+  let d = raw.replace(/[\s.\-()]/g, "");
+  if (d.startsWith("+84")) d = "0" + d.slice(3);
+  else if (d.startsWith("84") && d.length === 11) d = "0" + d.slice(2);
+  return /^0[35789]\d{8}$/.test(d) ? d : null;
+}
+
 /** Tạo tài khoản chủ trọ và tổ chức đầu tiên của họ. */
 export async function signUpOwner(input: {
   email: string;
@@ -60,14 +68,23 @@ export async function signUpOwner(input: {
   return { userId: user!.id, orgId };
 }
 
-export async function signIn(emailRaw: string, password: string): Promise<{ userId: string; token: string } | null> {
-  const [user] = await getDb().select().from(users).where(eq(users.email, normalizeEmail(emailRaw)));
+/** Đăng nhập bằng email hoặc số điện thoại. */
+export async function signIn(login: string, password: string): Promise<{ userId: string; token: string } | null> {
+  const phone = login.includes("@") ? null : normalizePhone(login);
+  const [user] = await getDb()
+    .select()
+    .from(users)
+    .where(phone ? eq(users.phone, phone) : eq(users.email, normalizeEmail(login)));
   if (!user?.passwordHash || !(await verifyPassword(password, user.passwordHash))) return null;
+  return { userId: user.id, token: await createSession(user.id) };
+}
+
+export async function createSession(userId: string): Promise<string> {
   const token = randomBytes(32).toString("base64url");
   await getDb()
     .insert(sessions)
-    .values({ userId: user.id, tokenHash: hashSessionToken(token), expiresAt: new Date(Date.now() + SESSION_TTL_DAYS * 86_400_000) });
-  return { userId: user.id, token };
+    .values({ userId, tokenHash: hashSessionToken(token), expiresAt: new Date(Date.now() + SESSION_TTL_DAYS * 86_400_000) });
+  return token;
 }
 
 export async function signOut(token: string): Promise<void> {

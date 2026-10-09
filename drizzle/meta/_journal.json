@@ -15,6 +15,20 @@
       "when": 1791512110944,
       "tag": "0001_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791531608615,
+      "tag": "0002_tenant_invites",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1791531610358,
+      "tag": "0003_tenant_rls",
+      "breakpoints": true
     }
   ]
 }

@@ -229,3 +229,13 @@ export async function createShareLinkAction(f: FormData) {
     return `${back}?link=${token}`;
   });
 }
+
+export async function createTenantInviteAction(f: FormData) {
+  const actor = await requireActor();
+  const back = `/co-so/${str(f, "propertyId")}/phong/${str(f, "unitId")}`;
+  await runAction(back, async () => {
+    const { createTenantInvite } = await import("@/server/tenant");
+    const { token } = await createTenantInvite(actor, str(f, "leaseId"));
+    return `${back}?moi=${token}`;
+  });
+}

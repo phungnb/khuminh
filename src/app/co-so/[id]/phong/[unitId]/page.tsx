@@ -1,18 +1,21 @@
 import { notFound } from "next/navigation";
+import { CopyBox } from "@/components/copy-box";
 import { Flash, PageTitle } from "@/components/ui";
 import { dmy, vnd } from "@/lib/format";
 import { requireActor } from "@/lib/session";
+import { baseUrl } from "@/lib/url";
 import { today, unitDetail } from "@/server/queries";
-import { changeRentAction, createLeaseAction, moveOutAction } from "../../../actions";
+import { changeRentAction, createLeaseAction, createTenantInviteAction, moveOutAction } from "../../../actions";
 
 export default async function Page({
   params,
   searchParams,
 }: {
   params: Promise<{ id: string; unitId: string }>;
-  searchParams: Promise<{ loi?: string; ok?: string }>;
+  searchParams: Promise<{ loi?: string; ok?: string; moi?: string }>;
 }) {
   const { id, unitId } = await params;
+  const sp = await searchParams;
   const actor = await requireActor();
   const d = await unitDetail(actor, unitId);
   if (!d) notFound();
@@ -27,7 +30,7 @@ export default async function Page({
   return (
     <>
       <PageTitle>Phòng {d.unit.block ? `${d.unit.block}-` : ""}{d.unit.code}</PageTitle>
-      <Flash params={await searchParams} />
+      <Flash params={sp} />
 
       {current ? (
         <section className="card space-y-4">
@@ -42,6 +45,26 @@ export default async function Page({
                 <li key={r.id}>Giá thuê {vnd(r.amount)} từ {dmy(r.effectiveFrom)}</li>
               ))}
             </ul>
+          </div>
+          <div className="rounded-md bg-stone-50 p-3">
+            <h3 className="text-sm font-semibold">App người thuê</h3>
+            {current.tenant.userId ? (
+              <p className="text-sm text-emerald-700">Đã có tài khoản: người thuê xem hóa đơn và quét QR trong app.</p>
+            ) : sp.moi ? (
+              <>
+                <p className="mb-2 text-sm text-stone-600">Gửi tin nhắn này cho người thuê. Link dùng được một lần, hết hạn sau 14 ngày.</p>
+                <CopyBox
+                  text={`Chào ${current.tenant.fullName}, mời bạn vào app KhuMình để xem hóa đơn phòng ${d.unit.block ? `${d.unit.block}-` : ""}${d.unit.code} hằng tháng và chuyển khoản bằng mã QR: ${await baseUrl()}/moi/${sp.moi}`}
+                />
+              </>
+            ) : (
+              <form action={createTenantInviteAction} className="mt-1 flex flex-wrap items-center gap-2">
+                {hidden}
+                <input type="hidden" name="leaseId" value={current.lease.id} />
+                <p className="flex-1 text-sm text-stone-600">Chưa có tài khoản. Mời vào app để họ tự xem hóa đơn.</p>
+                <button className="btn-secondary">Tạo link mời</button>
+              </form>
+            )}
           </div>
           <form action={changeRentAction} className="flex flex-wrap items-end gap-2">
             {hidden}

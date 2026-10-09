@@ -4,6 +4,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "KhuMình — Quản lý nhà trọ",
   description: "Ghi chỉ số, lập hóa đơn, gửi link và theo dõi công nợ nhà trọ.",
+  icons: { icon: "/icons/icon-192.png", apple: "/icons/apple-touch-icon.png" },
 };
 
 export const viewport: Viewport = { width: "device-width", initialScale: 1, themeColor: "#0f766e" };

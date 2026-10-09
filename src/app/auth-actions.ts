@@ -2,25 +2,15 @@
 
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { SESSION_COOKIE } from "@/lib/session";
+import { SESSION_COOKIE, setSession } from "@/lib/session";
 import { runAction } from "@/lib/action";
-import { SESSION_TTL_DAYS, signIn, signOut, signUpOwner } from "@/server/auth";
+import { signIn, signOut, signUpOwner } from "@/server/auth";
 import { UserError } from "@/server/audit";
-
-async function setSession(token: string) {
-  (await cookies()).set(SESSION_COOKIE, token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    maxAge: SESSION_TTL_DAYS * 86_400,
-  });
-}
 
 export async function loginAction(form: FormData) {
   await runAction("/dang-nhap", async () => {
     const res = await signIn(String(form.get("email") ?? ""), String(form.get("password") ?? ""));
-    if (!res) throw new UserError("Email hoặc mật khẩu không đúng");
+    if (!res) throw new UserError("Thông tin đăng nhập hoặc mật khẩu không đúng");
     await setSession(res.token);
     return "/";
   });

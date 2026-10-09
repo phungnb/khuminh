@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { actorFor, userFromSession } from "@/server/auth";
+import { actorFor, SESSION_TTL_DAYS, userFromSession } from "@/server/auth";
 import type { Actor } from "@/server/audit";
 
 export const SESSION_COOKIE = "km_session";
@@ -15,6 +15,24 @@ export async function requireActor(): Promise<Actor & { displayName: string }> {
   const user = await currentUser();
   if (!user) redirect("/dang-nhap");
   const actor = await actorFor(user.id);
-  if (!actor) redirect("/dang-nhap?loi=" + encodeURIComponent("Tài khoản chưa thuộc khu trọ nào"));
+  // Người thuê không quản lý khu trọ nào: về app người thuê.
+  if (!actor) redirect("/app");
   return { ...actor, displayName: user.displayName };
+}
+
+/** Người dùng đã đăng nhập (người thuê); chưa đăng nhập thì về trang đăng nhập. */
+export async function requireUser() {
+  const user = await currentUser();
+  if (!user) redirect("/dang-nhap");
+  return user;
+}
+
+export async function setSession(token: string) {
+  (await cookies()).set(SESSION_COOKIE, token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: SESSION_TTL_DAYS * 86_400,
+  });
 }

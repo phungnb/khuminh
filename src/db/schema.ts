@@ -348,6 +348,18 @@ export const invoiceShareTokens = pgTable("invoice_share_tokens", {
   createdAt: createdAt(),
 });
 
+/** Link mời người thuê tạo tài khoản app, gắn với hồ sơ người thuê. Chỉ lưu băm token. */
+export const tenantInvites = pgTable("tenant_invites", {
+  id: id(),
+  orgId: orgId(),
+  tenantId: uuid("tenant_id").notNull().references(() => tenants.id),
+  tokenHash: text("token_hash").notNull().unique(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  usedAt: timestamp("used_at", { withTimezone: true }),
+  createdBy: uuid("created_by").references(() => users.id),
+  createdAt: createdAt(),
+});
+
 // ---------- Bảng tin khu trọ ----------
 
 export const postKind = pgEnum("post_kind", ["announcement", "sell", "give", "want"]);
