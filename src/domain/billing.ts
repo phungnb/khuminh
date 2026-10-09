@@ -118,6 +118,11 @@ export interface BillingResult {
   errors: BillingIssue[];
 }
 
+/** Số đo hiển thị kiểu Việt Nam: 1.120,5 */
+function num(centi: number): string {
+  return (centi / 100).toLocaleString("vi-VN", { maximumFractionDigits: 2 });
+}
+
 function fmt(d: IsoDate): string {
   return `${d.slice(8, 10)}/${d.slice(5, 7)}`;
 }
@@ -278,7 +283,7 @@ export function computeInvoice(input: BillingInput): BillingResult {
           errors.push({
             code: "reading_decreased",
             meterId: m.id,
-            message: `Chỉ số ${m.name} giảm (${startR.valueCenti / 100} → ${endR.valueCenti / 100}). Kiểm tra lại hoặc ghi nhận thay đồng hồ.`,
+            message: `Chỉ số ${m.name} giảm (${num(startR.valueCenti)} → ${num(endR.valueCenti)}). Kiểm tra lại hoặc ghi nhận thay đồng hồ.`,
           });
           continue;
         }
@@ -286,7 +291,7 @@ export function computeInvoice(input: BillingInput): BillingResult {
         lines.push({
           kind: "fee",
           key,
-          description: `${rule.name}: ${startR.valueCenti / 100} → ${endR.valueCenti / 100} = ${consumption / 100} ${unit}`.trim(),
+          description: `${rule.name}: ${num(startR.valueCenti)} → ${num(endR.valueCenti)} = ${num(consumption)} ${unit}`.trim(),
           quantityCenti: consumption,
           unitPrice: rule.tiers && rule.tiers.length ? null : rule.unitPrice,
           amount: meteredAmount(consumption, rule),
