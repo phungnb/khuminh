@@ -6,7 +6,7 @@ import { requireActor } from "@/lib/session";
 import { baseUrl } from "@/lib/url";
 import { listStaff } from "@/server/staff";
 import { getProperty, listFeeRules, today } from "@/server/queries";
-import { createStaffInviteAction, removeStaffAction, setFeeRuleAction, updatePropertyAction } from "../../actions";
+import { createStaffInviteAction, removeStaffAction, setFeeRuleAction, setLocationAction, updatePropertyAction } from "../../actions";
 import { PropertyFields } from "../../property-fields";
 
 const METHOD_LABEL = {
@@ -119,6 +119,26 @@ export default async function Page({
         <h2 className="font-semibold">Thông tin cơ sở</h2>
         <PropertyFields v={property} />
         <button className="btn">Lưu</button>
+      </form>
+
+      <form id="vi-tri" action={setLocationAction} className="card mt-6 space-y-3">
+        <input type="hidden" name="propertyId" value={id} />
+        <h2 className="font-semibold">Vị trí cơ sở cho Chợ quanh đây</h2>
+        <p className="text-sm text-fg-muted">
+          Cư dân của cơ sở xem và đăng tin trong bán kính quanh vị trí này. Tin đăng chỉ hiện vị trí gần đúng (khoảng 500 m).
+          Mở Google Maps, giữ ngón tay lên vị trí cơ sở rồi sao chép tọa độ, hoặc dán link đầy đủ.
+        </p>
+        <div>
+          <label className="label" htmlFor="location">Tọa độ hoặc link Google Maps</label>
+          <input
+            className="input"
+            id="location"
+            name="location"
+            placeholder="10.7731, 106.6991"
+            defaultValue={property.lat !== null && property.lng !== null ? `${property.lat}, ${property.lng}` : ""}
+          />
+        </div>
+        <button className="btn">Lưu vị trí</button>
       </form>
 
       {actor.role === "owner" ? (

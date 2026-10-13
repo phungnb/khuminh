@@ -16,8 +16,8 @@ const jetbrains = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "KhuMình — Quản lý nhà trọ",
-  description: "Ghi chỉ số, lập hóa đơn, gửi link và theo dõi công nợ nhà trọ.",
+  title: "KhuMình — Chợ tiện ích quanh nhà",
+  description: "Mua bán, cho tặng, dịch vụ với hàng xóm quanh khu. Chủ trọ quản lý phòng, hóa đơn miễn phí.",
   icons: { icon: "/icons/icon-192.png", apple: "/icons/apple-touch-icon.png" },
 };
 

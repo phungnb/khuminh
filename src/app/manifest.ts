@@ -1,11 +1,11 @@
 import type { MetadataRoute } from "next";
 
-// App người thuê cài từ trình duyệt (PWA). Chủ trọ dùng bản web như cũ.
+// App cư dân cài từ trình duyệt (PWA): chợ quanh nhà, hóa đơn tiền nhà, bảng tin khu trọ.
 export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "KhuMình",
     short_name: "KhuMình",
-    description: "Xem hóa đơn tiền nhà, chuyển khoản bằng mã QR, nhận thông báo từ chủ nhà.",
+    description: "Mua bán, cho tặng, dịch vụ với hàng xóm quanh khu; xem hóa đơn tiền nhà và thông báo từ chủ nhà.",
     id: "/app",
     start_url: "/app",
     scope: "/",

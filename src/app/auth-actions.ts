@@ -12,7 +12,7 @@ export async function loginAction(form: FormData) {
     const res = await signIn(String(form.get("email") ?? ""), String(form.get("password") ?? ""));
     if (!res) throw new UserError("Thông tin đăng nhập hoặc mật khẩu không đúng");
     await setSession(res.token);
-    return "/";
+    return "/app";
   });
 }
 

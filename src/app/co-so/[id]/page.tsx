@@ -25,6 +25,12 @@ export default async function Page({
         occupied={d.units.occupied}
       />
       <Flash params={await searchParams} />
+      {property && (property.lat === null || property.lng === null) ? (
+        <div className="mt-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+          Cơ sở chưa có vị trí nên cư dân chưa dùng được Chợ quanh đây.{" "}
+          <Link className="font-semibold underline" href={`/co-so/${id}/bieu-phi#vi-tri`}>Đặt vị trí</Link>
+        </div>
+      ) : null}
       <div className="mt-4 mb-4 flex items-center justify-between gap-2">
         <h2 className="font-semibold">Tổng quan</h2>
         <Link className="btn" href={`/co-so/${id}/chi-so`}>Ghi chỉ số</Link>

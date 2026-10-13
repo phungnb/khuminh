@@ -6,6 +6,7 @@ import {
   bigint,
   boolean,
   date,
+  doublePrecision,
   index,
   integer,
   jsonb,
@@ -77,6 +78,9 @@ export const properties = pgTable(
     bankBin: text("bank_bin"),
     bankAccountNo: text("bank_account_no"),
     bankAccountName: text("bank_account_name"),
+    /** Tọa độ cơ sở (WGS84) — tâm "chợ quanh đây" cho cư dân của cơ sở. */
+    lat: doublePrecision("lat"),
+    lng: doublePrecision("lng"),
     archivedAt: timestamp("archived_at", { withTimezone: true }),
     createdAt: createdAt(),
   },
@@ -425,4 +429,74 @@ export const auditLogs = pgTable(
     createdAt: createdAt(),
   },
   (t) => [index("audit_logs_entity").on(t.entityType, t.entityId)],
+);
+
+// ---------- Chợ tiện ích quanh đây ----------
+// Không thuộc tổ chức: tin đăng là của người dùng, ai đăng nhập cũng xem được trong bán kính.
+// RLS theo người dùng (app.user_id), xem drizzle/0007_market_rls.sql. Liên hệ tách bảng riêng,
+// chỉ lộ cho người đăng và người quan tâm đã được đồng ý.
+
+export const listingKind = pgEnum("listing_kind", ["sell", "want", "give", "service"]);
+export const listingStatus = pgEnum("listing_status", ["open", "closed"]);
+
+export const listings = pgTable(
+  "listings",
+  {
+    id: id(),
+    authorUserId: uuid("author_user_id").notNull().references(() => users.id),
+    kind: listingKind("kind").notNull(),
+    category: text("category").notNull(),
+    title: text("title").notNull(),
+    body: text("body"),
+    price: money("price"),
+    /** Tọa độ đã làm tròn (~500 m) để không lộ vị trí chính xác. */
+    lat: doublePrecision("lat").notNull(),
+    lng: doublePrecision("lng").notNull(),
+    areaLabel: text("area_label").notNull(),
+    status: listingStatus("status").notNull().default("open"),
+    /** Ẩn tự động khi đủ báo cáo vi phạm (trigger), chỉ người đăng còn thấy. */
+    hiddenAt: timestamp("hidden_at", { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [index("listings_geo").on(t.lat, t.lng), index("listings_author").on(t.authorUserId)],
+);
+
+export const listingContacts = pgTable("listing_contacts", {
+  listingId: uuid("listing_id")
+    .primaryKey()
+    .references(() => listings.id, { onDelete: "cascade" }),
+  contact: text("contact").notNull(),
+});
+
+export const interestStatus = pgEnum("interest_status", ["pending", "accepted", "declined"]);
+
+export const listingInterests = pgTable(
+  "listing_interests",
+  {
+    id: id(),
+    listingId: uuid("listing_id")
+      .notNull()
+      .references(() => listings.id, { onDelete: "cascade" }),
+    userId: uuid("user_id").notNull().references(() => users.id),
+    /** Liên hệ của người quan tâm (SĐT/Zalo), chỉ người đăng tin thấy. */
+    contact: text("contact").notNull(),
+    note: text("note"),
+    status: interestStatus("status").notNull().default("pending"),
+    createdAt: createdAt(),
+  },
+  (t) => [uniqueIndex("listing_interests_unique").on(t.listingId, t.userId)],
+);
+
+export const listingReports = pgTable(
+  "listing_reports",
+  {
+    id: id(),
+    listingId: uuid("listing_id")
+      .notNull()
+      .references(() => listings.id, { onDelete: "cascade" }),
+    userId: uuid("user_id").notNull().references(() => users.id),
+    reason: text("reason").notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [uniqueIndex("listing_reports_unique").on(t.listingId, t.userId)],
 );

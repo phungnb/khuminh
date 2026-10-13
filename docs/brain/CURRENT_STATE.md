@@ -1,13 +1,22 @@
 # CURRENT_STATE — KhuMình
-Cập nhật: 2026-10-13 (rút từ code; mục [ASSUMED] là suy luận từ mã, cần anh xác nhận).
+Cập nhật: 2026-10-13, thêm chợ quanh đây (rút từ code; mục [ASSUMED] là suy luận từ mã, cần anh xác nhận).
+
+## Định vị sản phẩm (CONFIRMED, anh xác nhận 2026-10-13)
+- KhuMình = chợ tiện ích quanh nhà (mua bán, cho tặng, dịch vụ trong bán kính tới 20 km).
+- Quản lý trọ là MODULE kéo người dùng (như module CLB của RaceHub), không phải sản phẩm chính.
+- Kế hoạch: work/KM-CHO/PLAN.md (v2.0). KM-HUB-A v1.0 đã OUTDATED.
 
 ## Đang có (CONFIRMED từ code)
-- App Next.js 15 quản lý nhà trọ: cơ sở, phòng, hợp đồng thuê, kỳ, hóa đơn, thanh toán.
-- DB Drizzle/Postgres, migration trong drizzle/ (0000_init, 0001_rls, 0002_tenant_invites, 0003_tenant_rls).
+- Chợ quanh đây (giai đoạn 1, nhánh claude/project-thread-a1sihe): trang chủ /app là chợ; tin đăng theo
+  bán kính 1/3/10/20 km quanh tọa độ cơ sở; quan tâm → người đăng đồng ý mới lộ liên hệ; 3 báo cáo thì ẩn.
+  Bảng listings/listing_contacts/listing_interests/listing_reports, RLS theo app.user_id (0006, 0007).
+  Landing công khai `/`; module quản lý ở /quan-ly → /co-so/*.
+- Module quản lý trọ: cơ sở, phòng, hợp đồng thuê, kỳ, hóa đơn, thanh toán.
+- DB Drizzle/Postgres, migration trong drizzle/ (0000_init … 0005_staff_push_rls, 0006_market, 0007_market_rls).
 - Mô hình hai role: khuminh_app (chịu RLS) + khuminh_owner (chủ bảng, chỉ migrate).
 - Auth: chủ nhà đăng ký (email/mật khẩu); người thuê đăng nhập bằng SĐT qua link mời.
 - Domain tách lớp: src/domain (billing, payments, money), src/server, src/db.
-- Test: 5 file — billing, payments, money (nghiệp vụ) + tenant.db, flow.db (DB thật).
+- Test: unit (billing, payments, money, geo) + DB thật (flow, tenant, community, market).
 
 ## Môi trường
 - Triển khai: Vercel (vercel-build chạy setup-db trước next build). [ASSUMED]
