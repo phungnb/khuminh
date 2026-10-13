@@ -7,7 +7,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ l
   return (
     <main className="mx-auto max-w-sm px-4 py-12">
       <h1 className="mb-1 text-2xl font-bold text-brand-ink">KhuMình</h1>
-      <p className="mb-6 text-sm text-fg-muted">Chủ trọ đăng nhập bằng email, người thuê bằng số điện thoại</p>
+      <p className="mb-6 text-sm text-fg-muted">Chợ tiện ích quanh nhà. Người thuê đăng nhập bằng số điện thoại, chủ trọ bằng email</p>
       <Flash params={sp} />
       <form action={loginAction} className="card space-y-3">
         <div>

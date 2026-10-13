@@ -3,9 +3,11 @@
 import { randomUUID } from "node:crypto";
 import { runAction } from "@/lib/action";
 import { parseIntField, parseMoney, parseReading } from "@/lib/format";
+import { parseLocation } from "@/lib/geo";
 import { requireActor } from "@/lib/session";
 import { UserError } from "@/server/audit";
 import { adjustInvoice, generateDrafts, issueInvoices, voidInvoice } from "@/server/billing";
+import { setPropertyLocation } from "@/server/market";
 import { recordPayment, voidPayment } from "@/server/payments";
 import {
   changeRent,
@@ -283,4 +285,17 @@ export async function removeStaffAction(f: FormData) {
     const { removeStaff } = await import("@/server/staff");
     await removeStaff(actor, id, str(f, "userId"));
   }, "Đã bỏ nhân viên khỏi cơ sở");
+}
+
+export async function setLocationAction(f: FormData) {
+  const actor = await requireActor();
+  const id = str(f, "propertyId");
+  await runAction(`/co-so/${id}/bieu-phi`, async () => {
+    const raw = str(f, "location");
+    const loc = raw ? parseLocation(raw) : null;
+    if (raw && !loc) {
+      throw new UserError("Không đọc được tọa độ. Dán link Google Maps đầy đủ (có @vĩ độ,kinh độ) hoặc nhập dạng 10.77, 106.70");
+    }
+    await setPropertyLocation(actor, id, loc);
+  }, "Đã lưu vị trí");
 }

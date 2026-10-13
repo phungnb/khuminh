@@ -1,9 +1,20 @@
 # KhuMình
 
-Quản lý nhà trọ (miễn phí cho khu nhỏ) làm cửa vào cho ứng dụng tiện ích khu dân cư.
-Đặc tả và phản biện: thư mục `khuminh/` trong project SOFTWARE STUDIO.
+Chợ tiện ích quanh nhà: cư dân khu phố, phường, xã mua bán, cho tặng, tìm dịch vụ với hàng xóm
+trong bán kính 1–20 km. **Quản lý nhà trọ là một module** (miễn phí cho khu nhỏ), để kéo người
+dùng từ các dãy trọ, chung cư: người thuê có sẵn tài khoản và vào chợ quanh khu của mình.
+Đặc tả gốc và kế hoạch: thư mục `khuminh/` trong project KhuMình (`dac-ta-goc/`, `KM-CHO_plan-v2.0.md`).
 
-## Đã có
+## Chợ quanh đây (giai đoạn 1)
+
+- Mở cho người đã có tài khoản: người thuê (qua link mời), chủ trọ, nhân viên. Đăng ký công khai bằng SĐT là giai đoạn 2.
+- Vị trí lấy theo tọa độ cơ sở (chủ trọ đặt trong Cài đặt), tin đăng làm mờ ~500 m, chưa xin GPS.
+- Tin: cần bán, cần mua, cho tặng, dịch vụ; lọc bán kính 1/3/10/20 km (mặc định 3 km).
+- "Tôi quan tâm" → người đăng đồng ý thì hai bên thấy SĐT/Zalo của nhau. Không thanh toán trong app.
+- 3 người báo cáo thì tin tự ẩn.
+- RLS theo người dùng (`app.user_id`), không theo tổ chức: `drizzle/0007_market_rls.sql`.
+
+## Module quản lý trọ
 
 - Chủ trọ đăng ký/đăng nhập (email + mật khẩu), nhiều cơ sở trong một tài khoản.
 - Phòng: thêm hàng loạt (dán từ Excel), báo lỗi theo dòng, chặn trùng mã.

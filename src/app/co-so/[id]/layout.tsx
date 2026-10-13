@@ -23,14 +23,19 @@ export default async function Layout({ children, params }: { children: React.Rea
       <header className="border-b border-border bg-surface">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-2 px-4 py-3">
           <div className="flex items-center gap-2">
-            <Link href="/" className="font-bold text-fg">Khu<span className="text-brand-ink">Mình</span></Link>
+            <Link href="/app" className="font-bold text-fg">Khu<span className="text-brand-ink">Mình</span></Link>
+            <span className="text-fg-subtle">/</span>
+            <Link href="/quan-ly" className="text-sm text-fg-muted hover:text-brand-ink">Quản lý khu</Link>
             <span className="text-fg-subtle">/</span>
             <span className="font-semibold">{property.name}</span>
             {all.length > 1 ? <span className="text-xs text-fg-subtle">({all.length} cơ sở)</span> : null}
           </div>
-          <form action={logoutAction}>
-            <button className="text-sm text-fg-subtle hover:text-fg">Đăng xuất</button>
-          </form>
+          <div className="flex items-center gap-3">
+            <Link href="/app" className="text-sm font-medium text-brand-ink">Về chợ</Link>
+            <form action={logoutAction}>
+              <button className="text-sm text-fg-subtle hover:text-fg">Đăng xuất</button>
+            </form>
+          </div>
         </div>
         <nav className="mx-auto flex max-w-5xl gap-1 overflow-x-auto px-2">
           {TABS.map((t) => (
