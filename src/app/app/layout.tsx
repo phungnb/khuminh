@@ -22,10 +22,16 @@ export default async function Layout({ children }: { children: React.ReactNode }
           </form>
         </div>
       </header>
-      <main className="px-4 py-4">
+      <main className="px-4 pt-4 pb-24">
         <PwaInstall />
         {children}
       </main>
+      <nav className="fixed inset-x-0 bottom-0 border-t border-stone-200 bg-white pb-[env(safe-area-inset-bottom)]">
+        <div className="mx-auto grid max-w-md grid-cols-2 text-center text-sm font-medium">
+          <Link href="/app" className="py-3 text-stone-700">Hóa đơn</Link>
+          <Link href="/app/bang-tin" className="py-3 text-stone-700">Bảng tin</Link>
+        </div>
+      </nav>
     </div>
   );
 }

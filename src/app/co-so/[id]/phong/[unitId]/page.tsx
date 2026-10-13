@@ -18,7 +18,7 @@ export default async function Page({
   const sp = await searchParams;
   const actor = await requireActor();
   const d = await unitDetail(actor, unitId);
-  if (!d) notFound();
+  if (!d || d.unit.propertyId !== id) notFound();
   const current = d.leases.find((l) => l.lease.status === "active" && !l.lease.movedOutOn);
   const hidden = (
     <>

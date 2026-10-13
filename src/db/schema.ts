@@ -360,6 +360,33 @@ export const tenantInvites = pgTable("tenant_invites", {
   createdAt: createdAt(),
 });
 
+/** Link mời nhân viên vào quản lý một cơ sở. Chỉ lưu băm token. */
+export const staffInvites = pgTable("staff_invites", {
+  id: id(),
+  orgId: orgId(),
+  propertyId: uuid("property_id").notNull().references(() => properties.id),
+  tokenHash: text("token_hash").notNull().unique(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  usedAt: timestamp("used_at", { withTimezone: true }),
+  usedBy: uuid("used_by").references(() => users.id),
+  createdBy: uuid("created_by").references(() => users.id),
+  createdAt: createdAt(),
+});
+
+/** Đăng ký nhận thông báo đẩy của trình duyệt/app (Web Push). Thuộc người dùng, không thuộc tổ chức. */
+export const pushSubscriptions = pgTable(
+  "push_subscriptions",
+  {
+    id: id(),
+    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    endpoint: text("endpoint").notNull().unique(),
+    p256dh: text("p256dh").notNull(),
+    auth: text("auth").notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [index("push_subscriptions_user").on(t.userId)],
+);
+
 // ---------- Bảng tin khu trọ ----------
 
 export const postKind = pgEnum("post_kind", ["announcement", "sell", "give", "want"]);

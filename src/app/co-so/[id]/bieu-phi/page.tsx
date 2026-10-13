@@ -1,9 +1,12 @@
 import { notFound } from "next/navigation";
+import { CopyBox } from "@/components/copy-box";
 import { Flash, PageTitle } from "@/components/ui";
 import { dmy, vnd } from "@/lib/format";
 import { requireActor } from "@/lib/session";
+import { baseUrl } from "@/lib/url";
+import { listStaff } from "@/server/staff";
 import { getProperty, listFeeRules, today } from "@/server/queries";
-import { setFeeRuleAction, updatePropertyAction } from "../../actions";
+import { createStaffInviteAction, removeStaffAction, setFeeRuleAction, updatePropertyAction } from "../../actions";
 import { PropertyFields } from "../../property-fields";
 
 const METHOD_LABEL = {
@@ -18,17 +21,19 @@ export default async function Page({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ loi?: string; ok?: string }>;
+  searchParams: Promise<{ loi?: string; ok?: string; nv?: string }>;
 }) {
   const { id } = await params;
   const actor = await requireActor();
   const [property, rules] = await Promise.all([getProperty(actor, id), listFeeRules(actor, id)]);
   if (!property) notFound();
+  const sp = await searchParams;
+  const staff = actor.role === "owner" ? await listStaff(actor, id) : [];
 
   return (
     <>
       <PageTitle>Biểu phí và cài đặt</PageTitle>
-      <Flash params={await searchParams} />
+      <Flash params={sp} />
 
       <section className="card overflow-x-auto p-0">
         <table className="table">
@@ -115,6 +120,42 @@ export default async function Page({
         <PropertyFields v={property} />
         <button className="btn">Lưu</button>
       </form>
+
+      {actor.role === "owner" ? (
+        <section id="nhan-vien" className="card mt-6 space-y-3">
+          <h2 className="font-semibold">Nhân viên</h2>
+          <p className="text-sm text-stone-600">
+            Nhân viên được ghi chỉ số, thu tiền, đăng bảng tin của cơ sở này. Chỉ chủ trọ được phát hành, điều chỉnh, hủy hóa đơn.
+          </p>
+          {staff.length ? (
+            <ul className="divide-y divide-stone-100 text-sm">
+              {staff.map((m) => (
+                <li key={m.userId} className="flex items-center justify-between gap-2 py-2">
+                  <span>
+                    {m.displayName} <span className="text-stone-500">{m.email}</span>
+                  </span>
+                  <form action={removeStaffAction}>
+                    <input type="hidden" name="propertyId" value={id} />
+                    <input type="hidden" name="userId" value={m.userId} />
+                    <button className="btn-danger">Bỏ</button>
+                  </form>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          {sp.nv ? (
+            <>
+              <p className="text-sm text-stone-600">Gửi link này cho nhân viên. Link dùng một lần, hết hạn sau 7 ngày.</p>
+              <CopyBox text={`Mời bạn quản lý ${property.name} trên KhuMình: ${await baseUrl()}/nhan-vien/${sp.nv}`} />
+            </>
+          ) : (
+            <form action={createStaffInviteAction}>
+              <input type="hidden" name="propertyId" value={id} />
+              <button className="btn-secondary">Tạo link mời nhân viên</button>
+            </form>
+          )}
+        </section>
+      ) : null}
     </>
   );
 }

@@ -55,6 +55,11 @@ export default async function Page({
             <button className="btn">Phát hành {drafts.length} hóa đơn</button>
           </form>
         ) : null}
+        {rows.length > drafts.length ? (
+          <a className="btn-secondary" href={`/co-so/${id}/ky/${periodId}/xuat`}>
+            Xuất Excel
+          </a>
+        ) : null}
       </div>
       <p className="mb-4 text-sm text-stone-600">
         Tổng {vnd(total)} · đã thu {vnd(paid)} · còn {vnd(total - paid)} · hạn {dmy(period.dueDate)}
