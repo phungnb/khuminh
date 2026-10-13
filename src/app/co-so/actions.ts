@@ -179,7 +179,13 @@ export async function issueAllAction(f: FormData) {
     const ids = f.getAll("invoiceId").map(String);
     const n = await issueInvoices(actor, ids);
     if (n === 0) throw new UserError("Không có hóa đơn nháp để phát hành");
-  }, "Đã phát hành. Gửi link cho từng phòng.");
+    const { notifyInvoicesIssued } = await import("@/server/push");
+    const pushed = await notifyInvoicesIssued(actor, ids).catch((e) => (console.error(e), 0));
+    const msg = pushed
+      ? `Đã phát hành. Đã báo ${pushed} thiết bị trong app; phòng chưa dùng app thì gửi link.`
+      : "Đã phát hành. Gửi link cho từng phòng.";
+    return `${back}?ok=${encodeURIComponent(msg)}`;
+  });
 }
 
 export async function recordPaymentAction(f: FormData) {
@@ -238,4 +244,43 @@ export async function createTenantInviteAction(f: FormData) {
     const { token } = await createTenantInvite(actor, str(f, "leaseId"));
     return `${back}?moi=${token}`;
   });
+}
+
+export async function createPostAction(f: FormData) {
+  const actor = await requireActor();
+  const id = str(f, "propertyId");
+  await runAction(`/co-so/${id}/bang-tin`, async () => {
+    const { createPost, managerBoardViewer } = await import("@/server/board");
+    const kind = (str(f, "kind") || "announcement") as "announcement";
+    const price = str(f, "price") ? money(f, "price", "Giá") : null;
+    await createPost(await managerBoardViewer(actor, id), { kind, title: str(f, "title"), body: str(f, "body"), price });
+  }, "Đã đăng. Người thuê dùng app sẽ nhận thông báo.");
+}
+
+export async function hidePostAction(f: FormData) {
+  const actor = await requireActor();
+  const id = str(f, "propertyId");
+  await runAction(`/co-so/${id}/bang-tin`, async () => {
+    const { closePost, managerBoardViewer } = await import("@/server/board");
+    await closePost(await managerBoardViewer(actor, id), str(f, "postId"), "remove");
+  }, "Đã ẩn tin");
+}
+
+export async function createStaffInviteAction(f: FormData) {
+  const actor = await requireActor();
+  const id = str(f, "propertyId");
+  await runAction(`/co-so/${id}/bieu-phi`, async () => {
+    const { createStaffInvite } = await import("@/server/staff");
+    const { token } = await createStaffInvite(actor, id);
+    return `/co-so/${id}/bieu-phi?nv=${token}#nhan-vien`;
+  });
+}
+
+export async function removeStaffAction(f: FormData) {
+  const actor = await requireActor();
+  const id = str(f, "propertyId");
+  await runAction(`/co-so/${id}/bieu-phi`, async () => {
+    const { removeStaff } = await import("@/server/staff");
+    await removeStaff(actor, id, str(f, "userId"));
+  }, "Đã bỏ nhân viên khỏi cơ sở");
 }

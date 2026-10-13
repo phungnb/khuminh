@@ -12,15 +12,29 @@ export function today(): IsoDate {
   return new Date(Date.now() + 7 * 3_600_000).toISOString().slice(0, 10);
 }
 
+/** Nhân viên chỉ thấy các cơ sở được giao; chủ sở hữu thấy tất cả. */
+function staffScope(actor: Actor) {
+  return actor.role === "owner"
+    ? undefined
+    : inArray(
+        s.properties.id,
+        sql`(select ${s.propertyStaff.propertyId} from ${s.propertyStaff} where ${s.propertyStaff.userId} = ${actor.userId})`,
+      );
+}
+
 export async function listProperties(actor: Actor) {
   return withOrg(actor, (tx) =>
-    tx.select().from(s.properties).where(isNull(s.properties.archivedAt)).orderBy(asc(s.properties.createdAt)),
+    tx
+      .select()
+      .from(s.properties)
+      .where(and(isNull(s.properties.archivedAt), staffScope(actor)))
+      .orderBy(asc(s.properties.createdAt)),
   );
 }
 
 export async function getProperty(actor: Actor, propertyId: string) {
   return withOrg(actor, async (tx) => {
-    const [p] = await tx.select().from(s.properties).where(eq(s.properties.id, propertyId));
+    const [p] = await tx.select().from(s.properties).where(and(eq(s.properties.id, propertyId), staffScope(actor)));
     return p ?? null;
   });
 }

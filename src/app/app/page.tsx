@@ -3,6 +3,8 @@ import { Badge, Flash } from "@/components/ui";
 import { PAYMENT_STATE_LABEL } from "@/domain/payments";
 import { dmy, vnd } from "@/lib/format";
 import { requireUser } from "@/lib/session";
+import { PushToggle } from "@/components/push-toggle";
+import { pushPublicKey } from "@/server/push";
 import { tenantHome } from "@/server/tenant";
 
 export const dynamic = "force-dynamic";
@@ -17,9 +19,11 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ l
       </div>
     );
   }
+  const publicKey = pushPublicKey();
   return (
     <>
       <Flash params={await searchParams} />
+      {publicKey ? <PushToggle publicKey={publicKey} /> : null}
       {homes.map((h) => {
         const open = h.invoices.filter((i) => i.state === "unpaid" || i.state === "partial" || i.state === "overdue");
         const owed = open.reduce((s, i) => s + i.total - i.paid, 0);

@@ -161,6 +161,7 @@ export interface TenantInvoiceRow {
 
 export interface TenantHome {
   orgId: string;
+  propertyId: string;
   propertyName: string;
   unitCode: string;
   active: boolean;
@@ -193,6 +194,7 @@ export async function tenantHome(userId: string): Promise<TenantHome[]> {
         .orderBy(desc(invoices.dueDate));
       return ls.map((l) => ({
         orgId,
+        propertyId: l.unit.propertyId,
         propertyName: l.propertyName,
         unitCode: l.unit.block ? `${l.unit.block}-${l.unit.code}` : l.unit.code,
         active: l.lease.status === "active" && (!l.lease.movedOutOn || l.lease.movedOutOn >= t),

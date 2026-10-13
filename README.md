@@ -3,7 +3,7 @@
 Quản lý nhà trọ (miễn phí cho khu nhỏ) làm cửa vào cho ứng dụng tiện ích khu dân cư.
 Đặc tả và phản biện: thư mục `khuminh/` trong project SOFTWARE STUDIO.
 
-## Đã có (mốc 1)
+## Đã có
 
 - Chủ trọ đăng ký/đăng nhập (email + mật khẩu), nhiều cơ sở trong một tài khoản.
 - Phòng: thêm hàng loạt (dán từ Excel), báo lỗi theo dòng, chặn trùng mã.
@@ -15,12 +15,19 @@ Quản lý nhà trọ (miễn phí cho khu nhỏ) làm cửa vào cho ứng dụ
 - Link hóa đơn cho người thuê: không cần đăng nhập, mã QR chuyển khoản đúng số tiền và nội dung (VietQR), hết hạn 60 ngày.
 - Tổng quan: phải thu, đã thu, còn nợ, quá hạn, phòng trống, hợp đồng sắp hết hạn.
 - Nhật ký thao tác cho mọi thay đổi tiền và hợp đồng.
+- App người thuê (PWA, cài ra màn hình chính): vào bằng link mời của chủ trọ, đăng nhập bằng số điện thoại, xem hóa đơn và mã QR, một tài khoản cho nhiều nơi thuê.
+- Bảng tin khu trọ: chủ trọ/nhân viên đăng thông báo, người thuê đăng cần bán, cho tặng, cần tìm; chủ trọ ẩn tin.
+- Thông báo đẩy khi phát hành hóa đơn và khi chủ trọ đăng thông báo (cần khóa VAPID).
+- Nhân viên: mời bằng link theo cơ sở; chỉ thấy cơ sở được giao; không phát hành, điều chỉnh, hủy hóa đơn.
+- Xuất Excel hóa đơn từng kỳ (tổng hợp và chi tiết từng khoản).
 
 ## Chưa có
 
-- Tài khoản người thuê (Google/Zalo/OTP), PWA, thông báo đẩy, bảng tin khu trọ (bảng `posts` đã có trong lược đồ).
-- Tài khoản nhân viên (quyền đã có ở tầng nghiệp vụ, chưa có màn mời).
-- Xuất Excel, nhập phòng từ file .xlsx (hiện dán text).
+- Đăng nhập Zalo/OTP, quên mật khẩu (hiện chủ trọ tạo link mời mới).
+- Bình luận dưới tin, báo hỏng hóc.
+- Gói trả phí trên 15 phòng (chưa có cổng thanh toán).
+- Bọc Capacitor lên App Store / CH Play.
+- Nhập phòng từ file .xlsx (hiện dán text).
 - Sao lưu tự động: dùng tính năng backup của nhà cung cấp Postgres.
 
 ## Kiến trúc
@@ -60,6 +67,7 @@ npm run dev
    - `APP_DB_PASSWORD` = chuỗi ngẫu nhiên ít nhất 16 chữ cái/số (không ký tự đặc biệt)
 4. Deploy. Lệnh `vercel-build` tự tạo role `khuminh_app`, chạy migration, rồi build.
 5. Sau khi có tên miền, thêm `APP_URL` = `https://<tên>.vercel.app` và Redeploy để link hóa đơn dùng đúng địa chỉ.
+6. Thông báo đẩy (tùy chọn): chạy `npx web-push generate-vapid-keys` trên máy, thêm `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` (`mailto:email-của-bạn`) rồi Redeploy. Thiếu khóa thì app vẫn chạy, chỉ không có nút bật thông báo.
 
 Mỗi lần đẩy code lên nhánh khác `main`, Vercel tạo một link xem trước riêng; nhánh `main` là bản chính.
 
