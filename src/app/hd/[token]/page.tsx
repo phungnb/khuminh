@@ -12,14 +12,14 @@ export default async function Page({ params }: { params: Promise<{ token: string
     return (
       <main className="mx-auto max-w-md px-4 py-12 text-center">
         <h1 className="text-lg font-bold">Link không còn hiệu lực</h1>
-        <p className="mt-2 text-sm text-stone-600">Link hóa đơn đã hết hạn hoặc không đúng. Vui lòng liên hệ chủ nhà để nhận link mới.</p>
+        <p className="mt-2 text-sm text-fg-muted">Link hóa đơn đã hết hạn hoặc không đúng. Vui lòng liên hệ chủ nhà để nhận link mới.</p>
       </main>
     );
   }
   return (
     <main className="mx-auto max-w-md px-4 py-6">
       <InvoiceView inv={inv} />
-      <p className="mt-6 text-center text-xs text-stone-400">Tạo bởi KhuMình</p>
+      <p className="mt-6 text-center text-xs text-fg-subtle">Tạo bởi KhuMình</p>
     </main>
   );
 }

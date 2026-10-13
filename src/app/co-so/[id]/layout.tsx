@@ -20,21 +20,21 @@ export default async function Layout({ children, params }: { children: React.Rea
   if (!property) notFound();
   return (
     <div>
-      <header className="border-b border-stone-200 bg-white">
+      <header className="border-b border-border bg-surface">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-2 px-4 py-3">
           <div className="flex items-center gap-2">
-            <Link href="/" className="font-bold text-brand">KhuMình</Link>
-            <span className="text-stone-300">/</span>
+            <Link href="/" className="font-bold text-fg">Khu<span className="text-brand-ink">Mình</span></Link>
+            <span className="text-fg-subtle">/</span>
             <span className="font-semibold">{property.name}</span>
-            {all.length > 1 ? <span className="text-xs text-stone-500">({all.length} cơ sở)</span> : null}
+            {all.length > 1 ? <span className="text-xs text-fg-subtle">({all.length} cơ sở)</span> : null}
           </div>
           <form action={logoutAction}>
-            <button className="text-sm text-stone-500 hover:text-stone-800">Đăng xuất</button>
+            <button className="text-sm text-fg-subtle hover:text-fg">Đăng xuất</button>
           </form>
         </div>
         <nav className="mx-auto flex max-w-5xl gap-1 overflow-x-auto px-2">
           {TABS.map((t) => (
-            <Link key={t.href} href={`/co-so/${id}${t.href}`} className="whitespace-nowrap px-3 py-2 text-sm font-medium text-stone-600 hover:text-brand">
+            <Link key={t.href} href={`/co-so/${id}${t.href}`} className="whitespace-nowrap px-3 py-2 text-sm font-medium text-fg-muted hover:text-brand-ink">
               {t.label}
             </Link>
           ))}

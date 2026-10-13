@@ -44,11 +44,11 @@ export default async function Page({
       <ul className="space-y-2">
         {periods.map((p) => (
           <li key={p.id}>
-            <Link href={`/co-so/${id}/ky/${p.id}`} className="card block hover:border-brand">
+            <Link href={`/co-so/${id}/ky/${p.id}`} className="card block hover:border-brand-strong">
               <b>
                 {dmy(p.periodStart)} – {dmy(p.periodEnd)}
               </b>
-              <span className="ml-2 text-sm text-stone-500">hạn trả {dmy(p.dueDate)}</span>
+              <span className="ml-2 text-sm text-fg-subtle">hạn trả {dmy(p.dueDate)}</span>
             </Link>
           </li>
         ))}

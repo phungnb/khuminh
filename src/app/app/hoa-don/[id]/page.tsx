@@ -13,7 +13,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
   if (!inv) notFound();
   return (
     <>
-      <Link href="/app" className="mb-3 inline-block text-sm text-stone-500">← Phòng của tôi</Link>
+      <Link href="/app" className="mb-3 inline-block text-sm text-fg-subtle">← Phòng của tôi</Link>
       <InvoiceView inv={inv} />
     </>
   );

@@ -61,7 +61,7 @@ export default async function Page({
           </a>
         ) : null}
       </div>
-      <p className="mb-4 text-sm text-stone-600">
+      <p className="mb-4 text-sm text-fg-muted">
         Tổng {vnd(total)} · đã thu {vnd(paid)} · còn {vnd(total - paid)} · hạn {dmy(period.dueDate)}
       </p>
       {rows.length === 0 ? (
@@ -82,10 +82,10 @@ export default async function Page({
               {rows.map((r) => (
                 <tr key={r.id}>
                   <td>
-                    <Link className="font-semibold text-brand" href={`/co-so/${id}/hoa-don/${r.id}`}>
+                    <Link className="font-semibold text-brand-ink" href={`/co-so/${id}/hoa-don/${r.id}`}>
                       {r.unitCode}
                     </Link>
-                    <div className="text-xs text-stone-500 sm:hidden">{r.tenantName}</div>
+                    <div className="text-xs text-fg-subtle sm:hidden">{r.tenantName}</div>
                   </td>
                   <td className="hidden sm:table-cell">{r.tenantName}</td>
                   <td className="text-right">{vnd(r.total)}</td>

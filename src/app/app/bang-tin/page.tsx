@@ -18,7 +18,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ l
     ),
   ];
   if (places.length === 0) {
-    return <p className="card text-center text-sm text-stone-600">Bảng tin chỉ dành cho người đang ở trong khu trọ.</p>;
+    return <p className="card text-center text-sm text-fg-muted">Bảng tin chỉ dành cho người đang ở trong khu trọ.</p>;
   }
   const cs = places.some(([k]) => k === sp.cs) ? sp.cs! : places[0]![0];
   const [orgId, propertyId] = cs.split(".") as [string, string];
@@ -39,7 +39,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ l
       <h1 className="mb-3 text-xl font-bold">Bảng tin {places.find(([k]) => k === cs)![1]}</h1>
       <Flash params={sp} />
       <details className="card mb-4">
-        <summary className="cursor-pointer font-semibold text-brand">+ Đăng tin rao vặt</summary>
+        <summary className="cursor-pointer font-semibold text-brand-ink">+ Đăng tin rao vặt</summary>
         <form action={tenantCreatePostAction} className="mt-3 space-y-3">
           {hidden}
           <div>
@@ -62,7 +62,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ l
             <label className="label" htmlFor="body">Mô tả, cách liên hệ</label>
             <textarea className="input" id="body" name="body" rows={3} maxLength={2000} placeholder="Phòng 101, nhắn Zalo 09xx..." />
           </div>
-          <p className="text-xs text-stone-500">Chỉ người đang ở khu trọ này và chủ trọ thấy tin của bạn.</p>
+          <p className="text-xs text-fg-subtle">Chỉ người đang ở khu trọ này và chủ trọ thấy tin của bạn.</p>
           <button className="btn w-full">Đăng</button>
         </form>
       </details>

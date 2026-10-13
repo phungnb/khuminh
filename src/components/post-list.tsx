@@ -17,23 +17,23 @@ function ago(d: Date): string {
 
 /** Danh sách tin; `actions` vẽ nút thao tác cho từng tin (khác nhau giữa chủ trọ và người thuê). */
 export function PostList({ posts, actions }: { posts: PostRow[]; actions?: (p: PostRow) => React.ReactNode }) {
-  if (posts.length === 0) return <p className="card text-center text-sm text-stone-500">Chưa có tin nào.</p>;
+  if (posts.length === 0) return <p className="card text-center text-sm text-fg-subtle">Chưa có tin nào.</p>;
   return (
     <ul className="space-y-3">
       {posts.map((p) => (
         <li key={p.id} className={`card ${p.closed || p.hidden ? "opacity-60" : ""}`}>
           <div className="mb-1 flex flex-wrap items-center gap-2 text-xs">
             <span className={`rounded px-2 py-0.5 font-semibold ${KIND_STYLE[p.kind]}`}>{POST_KIND_LABEL[p.kind]}</span>
-            {p.closed ? <span className="rounded bg-stone-100 px-2 py-0.5 font-semibold text-stone-600">Đã xong</span> : null}
+            {p.closed ? <span className="rounded bg-surface-2 px-2 py-0.5 font-semibold text-fg-muted">Đã xong</span> : null}
             {p.hidden ? <span className="rounded bg-red-100 px-2 py-0.5 font-semibold text-red-700">Đã ẩn</span> : null}
-            <span className="text-stone-500">
+            <span className="text-fg-subtle">
               {p.authorName}
               {p.fromManager ? " · Chủ trọ" : ""} · {ago(p.createdAt)}
             </span>
           </div>
           <h3 className="font-semibold">{p.title}</h3>
-          {p.price !== null ? <p className="font-semibold text-brand">{vnd(p.price)}</p> : null}
-          {p.body ? <p className="mt-1 whitespace-pre-line text-sm text-stone-700">{p.body}</p> : null}
+          {p.price !== null ? <p className="font-semibold text-brand-ink">{vnd(p.price)}</p> : null}
+          {p.body ? <p className="mt-1 whitespace-pre-line text-sm text-fg-muted">{p.body}</p> : null}
           {actions ? <div className="mt-2 flex gap-2">{actions(p)}</div> : null}
         </li>
       ))}

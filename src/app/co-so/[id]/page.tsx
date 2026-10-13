@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { Flash, PageTitle, Stat } from "@/components/ui";
+import { CoSoWall } from "@/components/co-so-wall";
+import { Flash, Stat } from "@/components/ui";
 import { dmy, vnd } from "@/lib/format";
 import { requireActor } from "@/lib/session";
-import { dashboard } from "@/server/queries";
+import { dashboard, getProperty } from "@/server/queries";
 
 export default async function Page({
   params,
@@ -13,11 +14,21 @@ export default async function Page({
 }) {
   const { id } = await params;
   const actor = await requireActor();
-  const d = await dashboard(actor, id);
+  const [property, d] = await Promise.all([getProperty(actor, id), dashboard(actor, id)]);
   return (
     <>
-      <PageTitle action={<Link className="btn" href={`/co-so/${id}/chi-so`}>Ghi chỉ số</Link>}>Tổng quan</PageTitle>
+      <CoSoWall
+        id={id}
+        name={property?.name ?? "Cơ sở"}
+        address={property?.address}
+        total={d.units.total}
+        occupied={d.units.occupied}
+      />
       <Flash params={await searchParams} />
+      <div className="mt-4 mb-4 flex items-center justify-between gap-2">
+        <h2 className="font-semibold">Tổng quan</h2>
+        <Link className="btn" href={`/co-so/${id}/chi-so`}>Ghi chỉ số</Link>
+      </div>
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <Stat label="Phải thu (đã phát hành)" value={vnd(d.receivable)} />
         <Stat label="Đã thu" value={vnd(d.collected)} tone="ok" />
@@ -33,7 +44,7 @@ export default async function Page({
       <section className="card mt-6">
         <h2 className="mb-2 font-semibold">Hợp đồng hết hạn trong 30 ngày</h2>
         {d.expiring.length === 0 ? (
-          <p className="text-sm text-stone-500">Không có.</p>
+          <p className="text-sm text-fg-subtle">Không có.</p>
         ) : (
           <ul className="space-y-1 text-sm">
             {d.expiring.map((e) => (

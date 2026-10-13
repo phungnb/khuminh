@@ -30,7 +30,7 @@ export default async function Page({
           <label className="label" htmlFor="body">Nội dung (tùy chọn)</label>
           <textarea className="input" id="body" name="body" rows={3} maxLength={2000} />
         </div>
-        <p className="text-xs text-stone-500">Người thuê đã cài app và bật thông báo sẽ nhận ngay trên điện thoại.</p>
+        <p className="text-xs text-fg-subtle">Người thuê đã cài app và bật thông báo sẽ nhận ngay trên điện thoại.</p>
         <button className="btn">Đăng</button>
       </form>
       <PostList
