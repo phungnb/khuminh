@@ -27,6 +27,11 @@ jobs:
       APP_DB_PASSWORD: ciAppPassword123456
       DATABASE_URL_APP: postgres://khuminh_app:ciAppPassword123456@localhost:5432/khuminh
       APP_URL: http://localhost:3000
+      # test:db (src/db/test-setup.ts) tự tạo DB khuminh_vitest bằng kết nối admin.
+      # khuminh_owner là superuser của service postgres (POSTGRES_USER) → đủ quyền tạo DB.
+      TEST_DATABASE_ADMIN_URL: postgres://khuminh_owner:owner@localhost:5432/postgres
+      TEST_OWNER_PASSWORD: owner
+      TEST_APP_PASSWORD: ciAppPassword123456
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
