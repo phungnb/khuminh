@@ -9,7 +9,9 @@
 // không phải RLS. Thêm bảng mới vào đây PHẢI kèm lý do và cập nhật docs/brain/DECISION_LOG.md.
 import postgres from "postgres";
 
-const RLS_EXEMPT = new Set<string>(["users", "sessions"]);
+// users/sessions: tra lúc login trước khi có ngữ cảnh org (0001_rls.sql).
+// push_subscriptions: thuộc người dùng như sessions, app lọc theo user_id (0005_staff_push_rls.sql).
+const RLS_EXEMPT = new Set<string>(["users", "sessions", "push_subscriptions"]);
 
 const url = process.env.DATABASE_URL;
 if (!url) throw new Error("Thiếu DATABASE_URL");
