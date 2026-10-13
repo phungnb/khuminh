@@ -1,0 +1,57 @@
+name: CI
+on: { pull_request: {}, push: { branches: [ main ] } }
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: khuminh_owner
+          POSTGRES_PASSWORD: owner
+          POSTGRES_DB: khuminh
+        ports: [ "5432:5432" ]
+        options: >-
+          --health-cmd "pg_isready -U khuminh_owner" --health-interval 5s
+          --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgres://khuminh_owner:owner@localhost:5432/khuminh
+      APP_DB_PASSWORD: ciAppPassword123456
+      DATABASE_URL_APP: postgres://khuminh_app:ciAppPassword123456@localhost:5432/khuminh
+      APP_URL: http://localhost:3000
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "20" }
+      - run: npm ci
+      - name: Typecheck
+        run: npm run lint
+      - name: Unit tests
+        run: npm test
+      - name: Chuẩn bị DB (tạo role app + migrate + grant)
+        run: npm run db:setup
+      - name: DB tests
+        run: npm run test:db
+      - name: Kiểm RLS phủ hết bảng
+        run: npx tsx scripts/check-rls.ts
+
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: gitleaks (dò rò rỉ khóa)
+        uses: gitleaks/gitleaks-action@v2
+        env: { GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} }
+
+  phungos-version:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Kiểm phiên bản phung-os khớp bản đã pin
+        run: |
+          PIN=$(grep -oE 'PHUNG_OS_VERSION:[[:space:]]*[0-9.]+' CLAUDE.md | grep -oE '[0-9.]+' | head -1)
+          VEND=$(cat .phung-os/VERSION 2>/dev/null || echo missing)
+          echo "pin=$PIN vendored=$VEND"
+          test "$PIN" = "$VEND" || { echo "::error::phung-os trôi: pin($PIN) != vendored($VEND)"; exit 1; }
