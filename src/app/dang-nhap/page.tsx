@@ -6,8 +6,8 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ l
   const sp = await searchParams;
   return (
     <main className="mx-auto max-w-sm px-4 py-12">
-      <h1 className="mb-1 text-2xl font-bold text-brand">KhuMình</h1>
-      <p className="mb-6 text-sm text-stone-600">Chủ trọ đăng nhập bằng email, người thuê bằng số điện thoại</p>
+      <h1 className="mb-1 text-2xl font-bold text-brand-ink">KhuMình</h1>
+      <p className="mb-6 text-sm text-fg-muted">Chủ trọ đăng nhập bằng email, người thuê bằng số điện thoại</p>
       <Flash params={sp} />
       <form action={loginAction} className="card space-y-3">
         <div>
@@ -21,7 +21,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ l
         <button className="btn w-full">Đăng nhập</button>
       </form>
       <p className="mt-4 text-center text-sm">
-        Chưa có tài khoản? <Link className="font-semibold text-brand" href="/dang-ky">Đăng ký miễn phí</Link>
+        Chưa có tài khoản? <Link className="font-semibold text-brand-ink" href="/dang-ky">Đăng ký miễn phí</Link>
       </p>
     </main>
   );

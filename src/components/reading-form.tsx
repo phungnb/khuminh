@@ -45,7 +45,7 @@ export function ReadingInputs({ rows, storageKey }: { rows: ReadingRow[]; storag
   }
 
   return (
-    <div className="divide-y divide-stone-100">
+    <div className="divide-y divide-border/60">
       {rows.map((r) => {
         const raw = values[r.meterId] ?? "";
         const n = Number(raw.replace(",", "."));
@@ -54,12 +54,12 @@ export function ReadingInputs({ rows, storageKey }: { rows: ReadingRow[]; storag
           <div key={r.meterId} className="flex items-center gap-3 py-2">
             <div className="w-24 shrink-0">
               <div className="font-semibold">{r.unitCode}</div>
-              <div className="text-xs text-stone-500">{r.name}</div>
+              <div className="text-xs text-fg-subtle">{r.name}</div>
             </div>
-            <div className="w-28 shrink-0 text-xs text-stone-500">
+            <div className="w-28 shrink-0 text-xs text-fg-subtle">
               {r.last ? (
                 <>
-                  Trước: <b className="text-stone-800">{r.last.value.toLocaleString("vi-VN")}</b>
+                  Trước: <b className="text-fg">{r.last.value.toLocaleString("vi-VN")}</b>
                   <br />
                   {r.last.date.slice(8, 10)}/{r.last.date.slice(5, 7)}
                 </>
@@ -77,7 +77,7 @@ export function ReadingInputs({ rows, storageKey }: { rows: ReadingRow[]; storag
                 aria-label={`Chỉ số ${r.name} phòng ${r.unitCode}`}
               />
               {used !== null ? (
-                <div className={`mt-1 text-xs ${used < 0 ? "font-semibold text-red-700" : "text-stone-600"}`}>
+                <div className={`mt-1 text-xs ${used < 0 ? "font-semibold text-red-700" : "text-fg-muted"}`}>
                   {used < 0 ? `Chỉ số giảm ${used.toLocaleString("vi-VN")}. Kiểm tra lại.` : `Dùng ${used.toLocaleString("vi-VN")}`}
                 </div>
               ) : null}

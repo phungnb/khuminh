@@ -11,13 +11,13 @@ export async function InvoiceView({ inv }: { inv: PublicInvoice }) {
 
   return (
     <>
-      <p className="text-sm text-stone-500">{inv.propertyName}</p>
+      <p className="text-sm text-fg-subtle">{inv.propertyName}</p>
       <h1 className="text-xl font-bold">Phòng {inv.unitCode}</h1>
-      <p className="text-sm text-stone-600">
+      <p className="text-sm text-fg-muted">
         Mã hóa đơn {inv.code} · hạn trả {dmy(inv.dueDate)}
       </p>
       {inv.status === "void" ? (
-        <p className="mt-4 rounded-md bg-stone-100 p-3 text-sm">Hóa đơn này đã bị hủy. Chủ nhà sẽ gửi hóa đơn mới.</p>
+        <p className="mt-4 rounded-md bg-surface-2 p-3 text-sm">Hóa đơn này đã bị hủy. Chủ nhà sẽ gửi hóa đơn mới.</p>
       ) : null}
 
       <section className="card mt-4 p-0">
@@ -47,7 +47,7 @@ export async function InvoiceView({ inv }: { inv: PublicInvoice }) {
             ) : null}
             <tr>
               <td className="text-lg font-bold">Còn phải trả</td>
-              <td className="text-right text-lg font-bold text-brand">{vnd(due)}</td>
+              <td className="text-right text-lg font-bold text-brand-ink">{vnd(due)}</td>
             </tr>
           </tbody>
         </table>
@@ -68,7 +68,7 @@ export async function InvoiceView({ inv }: { inv: PublicInvoice }) {
           <p className="text-sm">
             Nội dung: <b>{inv.code}</b>
           </p>
-          <p className="mt-2 text-xs text-stone-500">Chủ nhà xác nhận đã nhận tiền thì trạng thái mới cập nhật.</p>
+          <p className="mt-2 text-xs text-fg-subtle">Chủ nhà xác nhận đã nhận tiền thì trạng thái mới cập nhật.</p>
         </section>
       ) : null}
     </>

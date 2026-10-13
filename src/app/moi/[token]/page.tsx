@@ -20,15 +20,15 @@ export default async function Page({
     return (
       <main className="mx-auto max-w-sm px-4 py-12 text-center">
         <h1 className="text-lg font-bold">Link mời không còn hiệu lực</h1>
-        <p className="mt-2 text-sm text-stone-600">Link đã hết hạn hoặc đã được dùng. Nếu bạn đã có tài khoản, hãy đăng nhập.</p>
+        <p className="mt-2 text-sm text-fg-muted">Link đã hết hạn hoặc đã được dùng. Nếu bạn đã có tài khoản, hãy đăng nhập.</p>
         <Link className="btn mt-4 inline-block" href="/dang-nhap">Đăng nhập</Link>
       </main>
     );
   }
   return (
     <main className="mx-auto max-w-sm px-4 py-10">
-      <h1 className="mb-1 text-2xl font-bold text-brand">KhuMình</h1>
-      <p className="mb-6 text-sm text-stone-600">
+      <h1 className="mb-1 text-2xl font-bold text-brand-ink">KhuMình</h1>
+      <p className="mb-6 text-sm text-fg-muted">
         Chào {invite.fullName}. Chủ nhà {invite.propertyName} mời bạn vào app để xem hóa đơn phòng {invite.unitCode} và chuyển khoản bằng mã QR.
       </p>
       <Flash params={await searchParams} />
@@ -42,7 +42,7 @@ export default async function Page({
           <label className="label" htmlFor="password">Mật khẩu (ít nhất 6 ký tự)</label>
           <input className="input" id="password" name="password" type="password" autoComplete="new-password" minLength={6} required />
         </div>
-        <p className="text-xs text-stone-500">Nếu số này đã có tài khoản KhuMình, nhập mật khẩu cũ để thêm phòng này vào tài khoản.</p>
+        <p className="text-xs text-fg-subtle">Nếu số này đã có tài khoản KhuMình, nhập mật khẩu cũ để thêm phòng này vào tài khoản.</p>
         <button className="btn w-full">Vào app</button>
       </form>
     </main>

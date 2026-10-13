@@ -20,18 +20,18 @@ export function PageTitle({ children, action }: { children: React.ReactNode; act
 }
 
 export function Stat({ label, value, tone }: { label: string; value: string; tone?: "warn" | "ok" }) {
-  const color = tone === "warn" ? "text-red-700" : tone === "ok" ? "text-emerald-700" : "text-stone-900";
+  const color = tone === "warn" ? "text-danger" : tone === "ok" ? "text-success" : "text-fg";
   return (
     <div className="card">
-      <div className="text-sm text-stone-500">{label}</div>
-      <div className={`mt-1 text-xl font-bold ${color}`}>{value}</div>
+      <div className="text-sm text-fg-subtle">{label}</div>
+      <div className={`tabular mt-1 text-xl font-bold ${color}`}>{value}</div>
     </div>
   );
 }
 
 export function Empty({ children, href, cta }: { children: React.ReactNode; href?: string; cta?: string }) {
   return (
-    <div className="card text-center text-sm text-stone-600">
+    <div className="card text-center text-sm text-fg-muted">
       <p>{children}</p>
       {href && cta ? (
         <Link href={href} className="btn mt-3">
@@ -43,8 +43,8 @@ export function Empty({ children, href, cta }: { children: React.ReactNode; href
 }
 
 const STATE_STYLE: Record<string, string> = {
-  draft: "bg-stone-100 text-stone-700",
-  void: "bg-stone-100 text-stone-500 line-through",
+  draft: "bg-surface-2 text-fg-muted",
+  void: "bg-surface-2 text-fg-subtle line-through",
   unpaid: "bg-amber-100 text-amber-800",
   partial: "bg-sky-100 text-sky-800",
   paid: "bg-emerald-100 text-emerald-800",

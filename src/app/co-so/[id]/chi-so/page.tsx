@@ -37,7 +37,7 @@ export default async function Page({
           <input type="hidden" name="propertyId" value={id} />
           <input type="hidden" name="date" value={date} />
           <ReadingInputs rows={rows} storageKey={storageKey} />
-          <p className="mt-3 text-xs text-stone-500">
+          <p className="mt-3 text-xs text-fg-subtle">
             Chỉ số chốt ngày cuối tháng hoặc sáng ngày đầu tháng sau đều dùng được cho kỳ đó. Ô để trống sẽ không lưu.
           </p>
           <button className="btn mt-3 w-full md:w-auto">Lưu chỉ số</button>

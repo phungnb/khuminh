@@ -50,7 +50,7 @@ export default async function Page({
             {rules.map((r) => (
               <tr key={r.id}>
                 <td>
-                  <b>{r.name}</b> <span className="text-xs text-stone-400">{r.key}</span>
+                  <b>{r.name}</b> <span className="text-xs text-fg-subtle">{r.key}</span>
                 </td>
                 <td>{METHOD_LABEL[r.method]}</td>
                 <td className="text-right">
@@ -68,7 +68,7 @@ export default async function Page({
       <form action={setFeeRuleAction} className="card mt-4 space-y-3">
         <input type="hidden" name="propertyId" value={id} />
         <h2 className="font-semibold">Thêm khoản phí hoặc đổi giá</h2>
-        <p className="text-sm text-stone-600">
+        <p className="text-sm text-fg-muted">
           Đổi giá: nhập đúng mã khoản đang có (ví dụ <code>electricity</code>) với giá mới và ngày áp dụng. Giá cũ được giữ cho các kỳ trước.
         </p>
         <div className="grid gap-3 md:grid-cols-3">
@@ -124,15 +124,15 @@ export default async function Page({
       {actor.role === "owner" ? (
         <section id="nhan-vien" className="card mt-6 space-y-3">
           <h2 className="font-semibold">Nhân viên</h2>
-          <p className="text-sm text-stone-600">
+          <p className="text-sm text-fg-muted">
             Nhân viên được ghi chỉ số, thu tiền, đăng bảng tin của cơ sở này. Chỉ chủ trọ được phát hành, điều chỉnh, hủy hóa đơn.
           </p>
           {staff.length ? (
-            <ul className="divide-y divide-stone-100 text-sm">
+            <ul className="divide-y divide-border/60 text-sm">
               {staff.map((m) => (
                 <li key={m.userId} className="flex items-center justify-between gap-2 py-2">
                   <span>
-                    {m.displayName} <span className="text-stone-500">{m.email}</span>
+                    {m.displayName} <span className="text-fg-subtle">{m.email}</span>
                   </span>
                   <form action={removeStaffAction}>
                     <input type="hidden" name="propertyId" value={id} />
@@ -145,7 +145,7 @@ export default async function Page({
           ) : null}
           {sp.nv ? (
             <>
-              <p className="text-sm text-stone-600">Gửi link này cho nhân viên. Link dùng một lần, hết hạn sau 7 ngày.</p>
+              <p className="text-sm text-fg-muted">Gửi link này cho nhân viên. Link dùng một lần, hết hạn sau 7 ngày.</p>
               <CopyBox text={`Mời bạn quản lý ${property.name} trên KhuMình: ${await baseUrl()}/nhan-vien/${sp.nv}`} />
             </>
           ) : (

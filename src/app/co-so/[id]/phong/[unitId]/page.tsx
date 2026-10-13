@@ -36,7 +36,7 @@ export default async function Page({
         <section className="card space-y-4">
           <div>
             <h2 className="font-semibold">Đang thuê: {current.tenant.fullName}</h2>
-            <p className="text-sm text-stone-600">
+            <p className="text-sm text-fg-muted">
               {current.tenant.phone ?? "Chưa có SĐT"} · vào ở {dmy(current.lease.startDate)} · {current.lease.occupants} người · cọc {vnd(current.lease.deposit)}
               {current.lease.expiresOn ? ` · hết hạn ${dmy(current.lease.expiresOn)}` : ""}
             </p>
@@ -46,13 +46,13 @@ export default async function Page({
               ))}
             </ul>
           </div>
-          <div className="rounded-md bg-stone-50 p-3">
+          <div className="rounded-md bg-surface-2 p-3">
             <h3 className="text-sm font-semibold">App người thuê</h3>
             {current.tenant.userId ? (
               <p className="text-sm text-emerald-700">Đã có tài khoản: người thuê xem hóa đơn và quét QR trong app.</p>
             ) : sp.moi ? (
               <>
-                <p className="mb-2 text-sm text-stone-600">Gửi tin nhắn này cho người thuê. Link dùng được một lần, hết hạn sau 14 ngày.</p>
+                <p className="mb-2 text-sm text-fg-muted">Gửi tin nhắn này cho người thuê. Link dùng được một lần, hết hạn sau 14 ngày.</p>
                 <CopyBox
                   text={`Chào ${current.tenant.fullName}, mời bạn vào app KhuMình để xem hóa đơn phòng ${d.unit.block ? `${d.unit.block}-` : ""}${d.unit.code} hằng tháng và chuyển khoản bằng mã QR: ${await baseUrl()}/moi/${sp.moi}`}
                 />
@@ -61,7 +61,7 @@ export default async function Page({
               <form action={createTenantInviteAction} className="mt-1 flex flex-wrap items-center gap-2">
                 {hidden}
                 <input type="hidden" name="leaseId" value={current.lease.id} />
-                <p className="flex-1 text-sm text-stone-600">Chưa có tài khoản. Mời vào app để họ tự xem hóa đơn.</p>
+                <p className="flex-1 text-sm text-fg-muted">Chưa có tài khoản. Mời vào app để họ tự xem hóa đơn.</p>
                 <button className="btn-secondary">Tạo link mời</button>
               </form>
             )}
@@ -88,7 +88,7 @@ export default async function Page({
             </div>
             <button className="btn-danger">Ghi nhận chuyển đi</button>
           </form>
-          <p className="text-xs text-stone-500">
+          <p className="text-xs text-fg-subtle">
             Khi chuyển đi: ghi chỉ số điện nước ngày đó, lập hóa đơn kỳ, rồi điều chỉnh trừ tiền cọc trên hóa đơn cuối.
           </p>
         </section>
@@ -130,7 +130,7 @@ export default async function Page({
               <input className="input" name="parking" inputMode="numeric" defaultValue="0" />
             </div>
           </div>
-          <p className="text-xs text-stone-500">Nhớ ghi chỉ số điện nước ngày vào ở ở trang Chỉ số.</p>
+          <p className="text-xs text-fg-subtle">Nhớ ghi chỉ số điện nước ngày vào ở ở trang Chỉ số.</p>
           <button className="btn">Lưu hợp đồng</button>
         </form>
       )}

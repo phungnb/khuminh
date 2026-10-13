@@ -62,10 +62,10 @@ export function PushToggle({ publicKey }: { publicKey: string }) {
 
   if (state === "loading" || state === "unsupported") return null;
   return (
-    <div className="mb-4 flex items-center justify-between gap-3 rounded-lg border border-stone-200 bg-white p-3 text-sm">
+    <div className="mb-4 flex items-center justify-between gap-3 rounded-lg border border-border bg-surface p-3 text-sm">
       <div>
         <p className="font-semibold">Thông báo</p>
-        <p className="text-stone-600">
+        <p className="text-fg-muted">
           {state === "on"
             ? "Đang bật: báo khi có hóa đơn mới và thông báo của chủ trọ."
             : state === "denied"

@@ -43,7 +43,7 @@ export default async function Page({
         Hóa đơn {inv.code}
       </PageTitle>
       <Flash params={sp} />
-      <p className="mb-4 text-sm text-stone-600">
+      <p className="mb-4 text-sm text-fg-muted">
         Phòng <b>{ctx.unitCode}</b> · {ctx.tenantName} {ctx.phone ? `· ${ctx.phone}` : ""} · hạn {dmy(inv.dueDate)} ·{" "}
         <Badge state={state}>{PAYMENT_STATE_LABEL[state]}</Badge>
       </p>
@@ -84,7 +84,7 @@ export default async function Page({
       </section>
 
       {inv.status === "draft" ? (
-        <p className="mt-4 text-sm text-stone-600">Hóa đơn nháp. Phát hành ở trang kỳ để gửi cho người thuê.</p>
+        <p className="mt-4 text-sm text-fg-muted">Hóa đơn nháp. Phát hành ở trang kỳ để gửi cho người thuê.</p>
       ) : null}
 
       {inv.status === "issued" ? (
@@ -98,7 +98,7 @@ export default async function Page({
                 <input type="hidden" name="invoiceId" value={invoiceId} />
                 <input type="hidden" name="back" value={back} />
                 <button className="btn">Tạo link hóa đơn</button>
-                <p className="mt-2 text-xs text-stone-500">Link xem được không cần đăng nhập, hết hạn sau 60 ngày.</p>
+                <p className="mt-2 text-xs text-fg-subtle">Link xem được không cần đăng nhập, hết hạn sau 60 ngày.</p>
               </form>
             )}
           </section>

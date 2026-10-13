@@ -36,12 +36,12 @@ export default async function Page({
               {units.map((u) => (
                 <tr key={u.id}>
                   <td>
-                    <Link className="font-semibold text-brand" href={`/co-so/${id}/phong/${u.id}`}>
+                    <Link className="font-semibold text-brand-ink" href={`/co-so/${id}/phong/${u.id}`}>
                       {u.block ? `${u.block}-` : ""}
                       {u.code}
                     </Link>
                   </td>
-                  <td>{u.lease ? `${u.lease.tenantName} (${u.lease.occupants} người)` : <span className="text-stone-400">Trống</span>}</td>
+                  <td>{u.lease ? `${u.lease.tenantName} (${u.lease.occupants} người)` : <span className="text-fg-subtle">Trống</span>}</td>
                   <td className="text-right">{u.lease ? vnd(u.lease.rent) : ""}</td>
                   <td>{dmy(u.lease?.expiresOn)}</td>
                 </tr>
@@ -54,7 +54,7 @@ export default async function Page({
       <form action={importUnitsAction} className="card mt-6 space-y-3">
         <input type="hidden" name="propertyId" value={id} />
         <h2 className="font-semibold">Thêm phòng</h2>
-        <p className="text-sm text-stone-600">
+        <p className="text-sm text-fg-muted">
           Mỗi dòng một phòng. Có dãy thì ghi <code>dãy,mã phòng</code>, ví dụ <code>A,101</code>. Dán trực tiếp hai cột từ Excel cũng được.
         </p>
         <textarea className="input font-mono" name="rows" rows={6} placeholder={"101\n102\n103"} />

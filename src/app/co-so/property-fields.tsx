@@ -36,8 +36,8 @@ export function PropertyFields({ v = {} }: { v?: Values }) {
           </select>
         </div>
       </div>
-      <fieldset className="space-y-3 rounded-md border border-stone-200 p-3">
-        <legend className="px-1 text-sm font-medium text-stone-700">Tài khoản nhận tiền (để tạo mã QR)</legend>
+      <fieldset className="space-y-3 rounded-md border border-border p-3">
+        <legend className="px-1 text-sm font-medium text-fg-muted">Tài khoản nhận tiền (để tạo mã QR)</legend>
         <div>
           <label className="label" htmlFor="bankBin">Ngân hàng</label>
           <select className="input" id="bankBin" name="bankBin" defaultValue={v.bankBin ?? ""}>

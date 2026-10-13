@@ -13,12 +13,12 @@ export default async function Layout({ children }: { children: React.ReactNode }
   const user = await requireUser();
   return (
     <div className="mx-auto min-h-screen max-w-md">
-      <header className="sticky top-0 z-10 flex items-center justify-between border-b border-stone-200 bg-white px-4 py-3">
-        <Link href="/app" className="font-bold text-brand">KhuMình</Link>
+      <header className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-surface px-4 py-3">
+        <Link href="/app" className="font-bold text-fg">Khu<span className="text-brand-ink">Mình</span></Link>
         <div className="flex items-center gap-3 text-sm">
-          <span className="text-stone-600">{user.displayName}</span>
+          <span className="text-fg-muted">{user.displayName}</span>
           <form action={logoutAction}>
-            <button className="text-stone-500">Đăng xuất</button>
+            <button className="text-fg-subtle hover:text-fg">Đăng xuất</button>
           </form>
         </div>
       </header>
@@ -26,10 +26,10 @@ export default async function Layout({ children }: { children: React.ReactNode }
         <PwaInstall />
         {children}
       </main>
-      <nav className="fixed inset-x-0 bottom-0 border-t border-stone-200 bg-white pb-[env(safe-area-inset-bottom)]">
+      <nav className="fixed inset-x-0 bottom-0 border-t border-border bg-surface pb-[env(safe-area-inset-bottom)]">
         <div className="mx-auto grid max-w-md grid-cols-2 text-center text-sm font-medium">
-          <Link href="/app" className="py-3 text-stone-700">Hóa đơn</Link>
-          <Link href="/app/bang-tin" className="py-3 text-stone-700">Bảng tin</Link>
+          <Link href="/app" className="py-3 text-fg-muted">Hóa đơn</Link>
+          <Link href="/app/bang-tin" className="py-3 text-fg-muted">Bảng tin</Link>
         </div>
       </nav>
     </div>

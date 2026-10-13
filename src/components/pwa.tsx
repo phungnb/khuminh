@@ -39,13 +39,13 @@ export function PwaInstall() {
     } catch {}
   };
   return (
-    <div className="mb-4 flex items-start gap-3 rounded-lg border border-brand/30 bg-teal-50 p-3 text-sm">
+    <div className="mb-4 flex items-start gap-3 rounded-lg border border-brand-strong/30 bg-surface-2 p-3 text-sm">
       <div className="flex-1">
         <p className="font-semibold">Thêm KhuMình vào màn hình chính</p>
         {ios ? (
-          <p className="text-stone-600">Trên iPhone: bấm nút Chia sẻ của Safari, chọn &quot;Thêm vào MH chính&quot;.</p>
+          <p className="text-fg-muted">Trên iPhone: bấm nút Chia sẻ của Safari, chọn &quot;Thêm vào MH chính&quot;.</p>
         ) : (
-          <p className="text-stone-600">Mở như một app, không cần vào trình duyệt.</p>
+          <p className="text-fg-muted">Mở như một app, không cần vào trình duyệt.</p>
         )}
         {prompt ? (
           <button
@@ -59,7 +59,7 @@ export function PwaInstall() {
           </button>
         ) : null}
       </div>
-      <button className="text-stone-400" aria-label="Đóng" onClick={close}>
+      <button className="text-fg-subtle" aria-label="Đóng" onClick={close}>
         ✕
       </button>
     </div>

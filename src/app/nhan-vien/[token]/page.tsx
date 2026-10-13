@@ -20,15 +20,15 @@ export default async function Page({
     return (
       <main className="mx-auto max-w-sm px-4 py-12 text-center">
         <h1 className="text-lg font-bold">Link mời không còn hiệu lực</h1>
-        <p className="mt-2 text-sm text-stone-600">Link đã hết hạn hoặc đã được dùng. Hãy xin chủ trọ link mới.</p>
+        <p className="mt-2 text-sm text-fg-muted">Link đã hết hạn hoặc đã được dùng. Hãy xin chủ trọ link mới.</p>
         <Link className="btn mt-4 inline-block" href="/dang-nhap">Đăng nhập</Link>
       </main>
     );
   }
   return (
     <main className="mx-auto max-w-sm px-4 py-10">
-      <h1 className="mb-1 text-2xl font-bold text-brand">KhuMình</h1>
-      <p className="mb-6 text-sm text-stone-600">
+      <h1 className="mb-1 text-2xl font-bold text-brand-ink">KhuMình</h1>
+      <p className="mb-6 text-sm text-fg-muted">
         {invite.orgName} mời bạn cùng quản lý <b>{invite.propertyName}</b>: ghi chỉ số, thu tiền, đăng thông báo.
       </p>
       <Flash params={await searchParams} />
@@ -46,7 +46,7 @@ export default async function Page({
           <label className="label" htmlFor="password">Mật khẩu (ít nhất 8 ký tự)</label>
           <input className="input" id="password" name="password" type="password" autoComplete="new-password" minLength={8} required />
         </div>
-        <p className="text-xs text-stone-500">Đã có tài khoản KhuMình với email này thì nhập mật khẩu cũ, không cần tên.</p>
+        <p className="text-xs text-fg-subtle">Đã có tài khoản KhuMình với email này thì nhập mật khẩu cũ, không cần tên.</p>
         <button className="btn w-full">Nhận lời mời</button>
       </form>
     </main>
