@@ -1,3 +1,5 @@
+> OUTDATED: thay bằng work/KM-CHO/PLAN.md (v2.0) ngày 2026-10-13.
+
 # APPROVAL_SUMMARY — KM-HUB-A plan v1.0
 
 - **Làm gì.** Trang chủ thành hub cư dân. Quản lý trọ gom vào mục "Quản lý khu". Thêm landing công khai "tiện ích khu dân cư". Có 6 task tuần tự.
