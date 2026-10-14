@@ -1,16 +1,18 @@
+import { Gift, HandCoins, MapPinOff, Search, ShieldCheck, Wrench, type LucideIcon } from "lucide-react";
 import Link from "next/link";
-import { Flash, PageTitle } from "@/components/ui";
+import { CategoryTile } from "@/components/category";
+import { BackLink, EmptyState, Flash, PageTitle } from "@/components/ui";
 import { requireUser } from "@/lib/session";
 import { CATEGORIES, LISTING_KIND_LABEL, marketPlaces, type ListingKind } from "@/server/market";
 import { createListingAction } from "../market-actions";
 
 export const dynamic = "force-dynamic";
 
-const KIND_HINT: Record<ListingKind, string> = {
-  sell: "Đồ cũ, đồ tự làm",
-  want: "Tìm mua, tìm người làm",
-  give: "Tặng miễn phí",
-  service: "Nhận sửa, dọn, nấu, dạy…",
+const KIND_META: Record<ListingKind, { hint: string; icon: LucideIcon }> = {
+  sell: { hint: "Đồ cũ, đồ tự làm", icon: HandCoins },
+  want: { hint: "Tìm mua, tìm người làm", icon: Search },
+  give: { hint: "Tặng miễn phí", icon: Gift },
+  service: { hint: "Nhận sửa, dọn, nấu, dạy…", icon: Wrench },
 };
 
 export default async function Page({ searchParams }: { searchParams: Promise<{ loi?: string; ok?: string }> }) {
@@ -18,47 +20,64 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ l
   const usable = (await marketPlaces(user.id)).filter((p) => p.location);
   if (usable.length === 0) {
     return (
-      <div className="card text-center text-sm text-fg-muted">
-        Bạn cần thuộc một khu đã có vị trí trên bản đồ để đăng tin. <Link className="font-semibold text-brand-ink" href="/app">Xem chợ</Link>
-      </div>
+      <EmptyState
+        icon={MapPinOff}
+        title="Chưa đăng tin được"
+        description="Bạn cần thuộc một khu đã có vị trí trên bản đồ để đăng tin. Nhờ chủ trọ đặt vị trí cho khu."
+        action={<Link className="btn-secondary" href="/app">Xem chợ</Link>}
+      />
     );
   }
   return (
     <>
+      <BackLink href="/app">Chợ</BackLink>
       <PageTitle>Đăng tin</PageTitle>
       <Flash params={await searchParams} />
       <form action={createListingAction} className="card space-y-4">
         <fieldset>
           <legend className="label">Loại tin</legend>
           <div className="grid grid-cols-2 gap-2">
-            {(Object.keys(LISTING_KIND_LABEL) as ListingKind[]).map((k, i) => (
-              <label key={k} className="flex cursor-pointer items-start gap-2 rounded-lg border border-border p-2 has-[:checked]:border-brand-ink has-[:checked]:bg-brand/20">
-                <input type="radio" name="kind" value={k} defaultChecked={i === 0} className="mt-1" />
-                <span>
-                  <span className="block text-sm font-semibold">{LISTING_KIND_LABEL[k]}</span>
-                  <span className="block text-xs text-fg-subtle">{KIND_HINT[k]}</span>
-                </span>
-              </label>
-            ))}
+            {(Object.keys(LISTING_KIND_LABEL) as ListingKind[]).map((k, i) => {
+              const { hint, icon: Icon } = KIND_META[k];
+              return (
+                <label
+                  key={k}
+                  className="flex cursor-pointer items-start gap-2.5 rounded-xl border border-border bg-surface-2 p-3 transition has-[:checked]:border-brand has-[:checked]:bg-brand/10 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-brand/40"
+                >
+                  <input type="radio" name="kind" value={k} defaultChecked={i === 0} className="peer sr-only" />
+                  <Icon className="mt-0.5 size-5 shrink-0 text-fg-muted peer-checked:text-brand" />
+                  <span>
+                    <span className="block text-sm font-semibold">{LISTING_KIND_LABEL[k]}</span>
+                    <span className="block text-xs text-fg-subtle">{hint}</span>
+                  </span>
+                </label>
+              );
+            })}
           </div>
         </fieldset>
         <div>
           <label className="label" htmlFor="title">Tiêu đề</label>
           <input className="input" id="title" name="title" maxLength={120} required placeholder="Quạt đứng Senko còn tốt" />
         </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="label" htmlFor="category">Danh mục</label>
-            <select className="input" id="category" name="category" defaultValue="Khác">
-              {CATEGORIES.map((c) => (
-                <option key={c} value={c}>{c}</option>
-              ))}
-            </select>
+        <fieldset>
+          <legend className="label">Danh mục</legend>
+          <div className="grid grid-cols-5 gap-2">
+            {CATEGORIES.map((c) => (
+              <label key={c} className="group flex cursor-pointer flex-col items-center gap-1 text-center">
+                <input type="radio" name="category" value={c} defaultChecked={c === "Khác"} className="peer sr-only" />
+                <CategoryTile
+                  category={c}
+                  className="size-12 rounded-2xl opacity-60 ring-brand ring-offset-2 ring-offset-surface transition peer-checked:opacity-100 peer-checked:ring-2 peer-focus-visible:ring-2"
+                  iconClass="size-5"
+                />
+                <span className="line-clamp-2 text-[11px] leading-tight text-fg-muted peer-checked:font-semibold peer-checked:text-fg">{c}</span>
+              </label>
+            ))}
           </div>
-          <div>
-            <label className="label" htmlFor="price">Giá (đ)</label>
-            <input className="input" id="price" name="price" inputMode="numeric" placeholder="Trống = thương lượng" />
-          </div>
+        </fieldset>
+        <div>
+          <label className="label" htmlFor="price">Giá (đ)</label>
+          <input className="input" id="price" name="price" inputMode="numeric" placeholder="Bỏ trống nếu thương lượng hoặc cho tặng" />
         </div>
         <div>
           <label className="label" htmlFor="body">Mô tả</label>
@@ -78,8 +97,9 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ l
             <input className="input" id="contact" name="contact" required placeholder="0901 234 567" />
           </div>
         </div>
-        <p className="text-xs text-fg-subtle">
-          Liên hệ chỉ hiện cho người bạn đồng ý. Tin hiện vị trí gần đúng theo khu, không hiện số phòng.
+        <p className="flex items-start gap-2 rounded-xl bg-surface-2 p-3 text-xs text-fg-muted">
+          <ShieldCheck className="size-4 shrink-0 text-brand" />
+          Liên hệ chỉ hiện cho người bạn đồng ý. Tin hiện vị trí gần đúng theo khu (khoảng 500 m), không hiện số phòng.
         </p>
         <button className="btn w-full">Đăng tin</button>
       </form>

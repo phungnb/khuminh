@@ -1,6 +1,6 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { InvoiceView } from "@/components/invoice-view";
+import { BackLink } from "@/components/ui";
 import { requireUser } from "@/lib/session";
 import { tenantInvoice } from "@/server/tenant";
 
@@ -13,7 +13,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
   if (!inv) notFound();
   return (
     <>
-      <Link href="/app/nha" className="mb-3 inline-block text-sm text-fg-subtle">← Nhà tôi</Link>
+      <BackLink href="/app/nha">Nhà tôi</BackLink>
       <InvoiceView inv={inv} />
     </>
   );

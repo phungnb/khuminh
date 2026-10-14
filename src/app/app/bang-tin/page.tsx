@@ -1,6 +1,7 @@
+import { Megaphone, Plus } from "lucide-react";
 import Link from "next/link";
 import { PostList } from "@/components/post-list";
-import { Flash } from "@/components/ui";
+import { EmptyState, Flash } from "@/components/ui";
 import { requireUser } from "@/lib/session";
 import { listPosts, tenantBoardViewer } from "@/server/board";
 import { tenantHome } from "@/server/tenant";
@@ -18,7 +19,14 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ l
     ),
   ];
   if (places.length === 0) {
-    return <p className="card text-center text-sm text-fg-muted">Bảng tin chỉ dành cho người đang ở trong khu trọ.</p>;
+    return (
+      <EmptyState
+        icon={Megaphone}
+        title="Bảng tin của khu"
+        description="Bảng tin chỉ dành cho người đang ở trong khu trọ. Nhờ chủ trọ gửi link mời để tham gia."
+        action={<Link className="btn-secondary" href="/app">Về chợ</Link>}
+      />
+    );
   }
   const cs = places.some(([k]) => k === sp.cs) ? sp.cs! : places[0]![0];
   const [orgId, propertyId] = cs.split(".") as [string, string];
@@ -28,18 +36,29 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ l
   return (
     <>
       {places.length > 1 ? (
-        <div className="mb-3 flex gap-2 overflow-x-auto">
+        <div className="scrollbar-none -mx-4 mb-3 flex gap-2 overflow-x-auto px-4">
           {places.map(([k, name]) => (
-            <Link key={k} href={`/app/bang-tin?cs=${k}`} className={k === cs ? "btn" : "btn-secondary"}>
+            <Link key={k} href={`/app/bang-tin?cs=${k}`} className={k === cs ? "chip chip-on" : "chip"}>
               {name}
             </Link>
           ))}
         </div>
       ) : null}
-      <h1 className="mb-3 text-xl font-bold">Bảng tin {places.find(([k]) => k === cs)![1]}</h1>
+      <div className="mb-3 flex items-center gap-3">
+        <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-brand/15 text-brand">
+          <Megaphone className="size-5" />
+        </div>
+        <div className="min-w-0">
+          <h1 className="truncate text-xl font-bold">Bảng tin {places.find(([k]) => k === cs)![1]}</h1>
+          <p className="text-xs text-fg-subtle">Chỉ người trong khu và chủ trọ thấy</p>
+        </div>
+      </div>
       <Flash params={sp} />
       <details className="card mb-4">
-        <summary className="cursor-pointer font-semibold text-brand-ink">+ Đăng tin rao vặt</summary>
+        <summary className="flex cursor-pointer list-none items-center gap-2 font-semibold text-brand-ink [&::-webkit-details-marker]:hidden">
+          <Plus className="size-4" />
+          Đăng tin trong khu
+        </summary>
         <form action={tenantCreatePostAction} className="mt-3 space-y-3">
           {hidden}
           <div>

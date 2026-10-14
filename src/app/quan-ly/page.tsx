@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { Logo } from "@/components/ui";
+import { Building2, MapPin, MapPinOff, Plus } from "lucide-react";
+import { ManageHeader } from "@/components/manage-header";
+import { EmptyState } from "@/components/ui";
 import { wallBackground } from "@/lib/club-themes";
 import { requireActor } from "@/lib/session";
 import { listProperties } from "@/server/queries";
-import { logoutAction } from "../auth-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -13,30 +14,24 @@ export default async function Page() {
   const props = await listProperties(actor);
   return (
     <div>
-      <header className="sticky top-0 z-40 border-b border-border bg-bg/85 backdrop-blur-md">
-        <div className="mx-auto flex max-w-5xl items-center justify-between gap-2 px-4 py-3">
-          <div className="flex items-center gap-2">
-            <Link href="/app" aria-label="KhuMình — về chợ"><Logo /></Link>
-            <span className="text-fg-subtle">/</span>
-            <span className="font-semibold">Quản lý khu</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <Link href="/app" className="text-sm font-medium text-brand-ink">Về chợ</Link>
-            <form action={logoutAction}>
-              <button className="text-sm text-fg-subtle hover:text-fg">Đăng xuất</button>
-            </form>
-          </div>
-        </div>
-      </header>
+      <ManageHeader crumbs={[{ label: "Quản lý khu" }]} />
       <main className="mx-auto max-w-5xl px-4 py-6">
         <div className="mb-4 flex items-center justify-between gap-2">
           <h1 className="text-xl font-bold">Cơ sở của bạn</h1>
-          {actor.role === "owner" ? <Link href="/co-so/moi" className="btn">Thêm cơ sở</Link> : null}
+          {actor.role === "owner" ? (
+            <Link href="/co-so/moi" className="btn">
+              <Plus className="size-4" />
+              Thêm cơ sở
+            </Link>
+          ) : null}
         </div>
         {props.length === 0 ? (
-          <div className="card text-center text-sm text-fg-muted">
-            Chưa có cơ sở nào. Tạo cơ sở đầu tiên để quản lý phòng, hóa đơn và mở chợ cho cư dân.
-          </div>
+          <EmptyState
+            icon={Building2}
+            title="Chưa có cơ sở nào"
+            description="Tạo cơ sở đầu tiên để quản lý phòng, hóa đơn và mở chợ cho cư dân."
+            action={actor.role === "owner" ? <Link href="/co-so/moi" className="btn">Tạo cơ sở</Link> : undefined}
+          />
         ) : (
           <div className="grid gap-4 md:grid-cols-2">
             {props.map((p) => (
@@ -45,8 +40,16 @@ export default async function Page() {
                   <div className="text-[11px] font-semibold uppercase tracking-wide text-white/70">Cơ sở</div>
                   <h2 className="truncate text-xl font-bold">{p.name}</h2>
                   {p.address ? <p className="truncate text-sm text-white/80">{p.address}</p> : null}
-                  <p className="mt-3 text-xs text-white/80">
-                    {p.lat !== null && p.lng !== null ? "Đã mở Chợ quanh đây" : "Chưa đặt vị trí, cư dân chưa dùng được chợ"}
+                  <p className="mt-3 flex items-center gap-1.5 text-xs text-white/80">
+                    {p.lat !== null && p.lng !== null ? (
+                      <>
+                        <MapPin className="size-3.5" /> Đã mở Chợ quanh đây
+                      </>
+                    ) : (
+                      <>
+                        <MapPinOff className="size-3.5" /> Chưa đặt vị trí, cư dân chưa dùng được chợ
+                      </>
+                    )}
                   </p>
                 </div>
               </Link>
