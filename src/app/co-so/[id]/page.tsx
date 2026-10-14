@@ -26,7 +26,7 @@ export default async function Page({
       />
       <Flash params={await searchParams} />
       {property && (property.lat === null || property.lng === null) ? (
-        <div className="mt-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+        <div className="mt-4 rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-sm text-warning">
           Cơ sở chưa có vị trí nên cư dân chưa dùng được Chợ quanh đây.{" "}
           <Link className="font-semibold underline" href={`/co-so/${id}/bieu-phi#vi-tri`}>Đặt vị trí</Link>
         </div>

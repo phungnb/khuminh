@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ArrowLeft, Clock, Flag, MapPin, Phone, Tag } from "lucide-react";
+import { CategoryTile } from "@/components/category";
 import { ago, KindBadge, priceText } from "@/components/listing-card";
+import { ShareButton } from "@/components/share-button";
 import { Flash } from "@/components/ui";
 import { formatKm } from "@/lib/geo";
 import { requireUser } from "@/lib/session";
@@ -29,19 +32,42 @@ export default async function Page({
 
   return (
     <>
-      <Link href={sp.o ? `/app?o=${encodeURIComponent(sp.o)}` : "/app"} className="mb-3 inline-block text-sm text-fg-subtle">← Chợ quanh đây</Link>
-      <Flash params={sp} />
-      <article className="card">
-        <div className="flex items-center justify-between gap-2">
-          <KindBadge kind={l.kind} />
-          <span className="text-xs text-fg-subtle">{ago(l.createdAt)}</span>
+      <div className="relative -mx-4 -mt-4">
+        <CategoryTile category={l.category} className="aspect-[16/10] w-full" iconClass="size-16" />
+        <Link
+          href={sp.o ? `/app?o=${encodeURIComponent(sp.o)}` : "/app"}
+          aria-label="Về chợ"
+          className="absolute top-3 left-3 grid size-11 place-items-center rounded-full bg-black/40 text-white backdrop-blur"
+        >
+          <ArrowLeft className="size-5" aria-hidden />
+        </Link>
+        <div className="absolute top-3 right-3">
+          <ShareButton title={l.title} />
         </div>
-        <h1 className="mt-2 text-xl font-bold">{l.title}</h1>
-        <p className="tabular mt-1 text-2xl font-bold text-brand-ink">{priceText(l)}</p>
-        <p className="mt-1 text-sm text-fg-subtle">
-          {l.category} · {l.distanceKm !== null ? `${formatKm(l.distanceKm)} · ` : ""}gần {l.areaLabel} · {l.authorName}
-        </p>
-        {l.body ? <p className="mt-3 whitespace-pre-line text-sm">{l.body}</p> : null}
+        <KindBadge kind={l.kind} className="absolute bottom-3 left-4" />
+      </div>
+      <div className="mt-4">
+        <Flash params={sp} />
+      </div>
+      <article className="animate-fade-in">
+        <h1 className="text-xl leading-snug font-bold">{l.title}</h1>
+        <p className="tabular mt-1 text-2xl font-extrabold text-brand">{priceText(l)}</p>
+        <ul className="mt-3 grid gap-1.5 text-sm text-fg-muted">
+          <li className="flex items-center gap-2"><Tag className="size-4" aria-hidden />{l.category}</li>
+          <li className="flex items-center gap-2">
+            <MapPin className="size-4" aria-hidden />
+            {l.distanceKm !== null ? `${formatKm(l.distanceKm)} · ` : ""}gần {l.areaLabel}
+          </li>
+          <li className="flex items-center gap-2"><Clock className="size-4" aria-hidden />{ago(l.createdAt)}</li>
+        </ul>
+        {l.body ? <p className="card mt-4 text-sm leading-relaxed whitespace-pre-line">{l.body}</p> : null}
+        <div className="card mt-3 flex items-center gap-3">
+          <span className="grid size-11 place-items-center rounded-full bg-surface-2 text-lg font-bold">{l.authorName.charAt(0).toUpperCase()}</span>
+          <div className="min-w-0">
+            <p className="truncate font-semibold">{l.authorName}</p>
+            <p className="text-xs text-fg-subtle">Người đăng · cư dân gần {l.areaLabel}</p>
+          </div>
+        </div>
         {l.status === "closed" ? <p className="mt-3 text-sm font-semibold text-fg-muted">Tin đã đóng.</p> : null}
         {l.hidden ? <p className="mt-3 text-sm font-semibold text-danger">Tin bị ẩn do nhiều người báo cáo.</p> : null}
       </article>
@@ -65,7 +91,10 @@ export default async function Page({
                 <span className="text-xs text-fg-subtle">{INTEREST_LABEL[i.status]}</span>
               </div>
               {i.note ? <p className="mt-1 text-fg-muted">“{i.note}”</p> : null}
-              <p className="mt-1">Liên hệ: <span className="font-semibold">{i.contact}</span></p>
+              <p className="mt-1">
+                Liên hệ:{" "}
+                <a className="font-semibold text-brand" href={`tel:${i.contact.replace(/[^0-9+]/g, "")}`}>{i.contact}</a>
+              </p>
               {i.status === "pending" ? (
                 <div className="mt-2 flex gap-2">
                   <form action={decideInterestAction}>
@@ -89,9 +118,9 @@ export default async function Page({
         <>
           <section className="card mt-4 space-y-3">
             {l.contact ? (
-              <p className="text-sm">
-                Liên hệ người đăng: <span className="text-lg font-bold text-brand-ink">{l.contact}</span>
-              </p>
+              <a href={`tel:${l.contact.replace(/[^0-9+]/g, "")}`} className="btn w-full">
+                <Phone className="size-5" aria-hidden /> Gọi {l.contact}
+              </a>
             ) : l.myInterest ? (
               <p className="text-sm text-fg-muted">Bạn đã quan tâm · {INTEREST_LABEL[l.myInterest.status]}.</p>
             ) : l.status === "open" ? (
@@ -115,7 +144,7 @@ export default async function Page({
             <p className="mt-4 text-center text-xs text-fg-subtle">Bạn đã báo cáo tin này.</p>
           ) : (
             <details className="mt-4 text-sm">
-              <summary className="cursor-pointer text-fg-subtle">Báo cáo tin vi phạm</summary>
+              <summary className="flex cursor-pointer items-center gap-1 text-fg-subtle"><Flag className="size-4" aria-hidden />Báo cáo tin vi phạm</summary>
               <form action={reportListingAction} className="card mt-2 space-y-2">
                 {hidden}
                 <input className="input" name="reason" required minLength={3} maxLength={300} placeholder="Lừa đảo, hàng cấm, spam…" />

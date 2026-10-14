@@ -4,7 +4,7 @@
 // Mọi truy cập bảng chợ đi qua withUser() — RLS theo app.user_id (drizzle/0007_market_rls.sql).
 // Liên hệ người đăng ở bảng riêng, chỉ lộ khi người đăng đồng ý một lượt quan tâm.
 
-import { and, desc, eq, gte, inArray, isNull, lte, ne, or, sql } from "drizzle-orm";
+import { and, desc, eq, gte, ilike, inArray, isNull, lte, ne, or, sql } from "drizzle-orm";
 import { withOrg, withUser } from "@/db/client";
 import {
   leases,
@@ -210,13 +210,23 @@ function toRow(r: RawListing, userId: string, center: LatLng | null): ListingRow
 }
 
 /** Tin đang mở trong bán kính, mới nhất trước. */
+export interface ListingFilter {
+  kind?: ListingKind;
+  category?: string;
+  /** Tìm trong tiêu đề và mô tả. */
+  q?: string;
+}
+
 export async function searchListings(
   userId: string,
   center: LatLng,
   radiusKm: number,
-  kind?: ListingKind,
+  filter: ListingFilter = {},
   limit = 100,
 ): Promise<ListingRow[]> {
+  const { kind, category } = filter;
+  const q = filter.q?.trim().slice(0, 80);
+  const like = q ? `%${q.replace(/[\\%_]/g, (c) => `\\${c}`)}%` : null;
   const b = boundingBox(center, radiusKm);
   const rows = (await withUser(userId, (tx) =>
     tx
@@ -232,6 +242,8 @@ export async function searchListings(
           gte(listings.lng, b.minLng),
           lte(listings.lng, b.maxLng),
           kind ? eq(listings.kind, kind) : undefined,
+          category ? eq(listings.category, category) : undefined,
+          like ? or(ilike(listings.title, like), ilike(listings.body, like)) : undefined,
         ),
       )
       .orderBy(desc(listings.createdAt))

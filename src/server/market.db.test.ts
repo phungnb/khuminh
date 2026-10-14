@@ -102,7 +102,10 @@ describe("chợ quanh đây", () => {
     const far = await searchListings(tB, centerA, 20);
     expect(far.map((l) => l.title).sort()).toEqual(["Quạt đứng", "Tặng nồi cơm"]);
     expect(far.find((l) => l.kind === "give")!.price).toBeNull();
-    expect((await searchListings(tB, centerA, 20, "give")).map((l) => l.title)).toEqual(["Tặng nồi cơm"]);
+    expect((await searchListings(tB, centerA, 20, { kind: "give" })).map((l) => l.title)).toEqual(["Tặng nồi cơm"]);
+    expect((await searchListings(tB, centerA, 20, { category: "Điện tử" })).map((l) => l.title)).toEqual(["Quạt đứng"]);
+    expect((await searchListings(tB, centerA, 20, { q: "nồi" })).map((l) => l.title)).toEqual(["Tặng nồi cơm"]);
+    expect(await searchListings(tB, centerA, 20, { q: "100%_" })).toEqual([]);
     // Tọa độ lưu đã làm mờ.
     const [raw] = await withUser(tA, (tx) => tx.select().from(s.listings).where(eq(s.listings.id, id)));
     expect(raw!.lat).toBe(10.775);

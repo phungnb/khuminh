@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Logo } from "@/components/ui";
 import { notFound } from "next/navigation";
 import { requireActor } from "@/lib/session";
 import { getProperty, listProperties } from "@/server/queries";
@@ -20,10 +21,10 @@ export default async function Layout({ children, params }: { children: React.Rea
   if (!property) notFound();
   return (
     <div>
-      <header className="border-b border-border bg-surface">
+      <header className="sticky top-0 z-40 border-b border-border bg-bg/85 backdrop-blur-md">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-2 px-4 py-3">
           <div className="flex items-center gap-2">
-            <Link href="/app" className="font-bold text-fg">Khu<span className="text-brand-ink">Mình</span></Link>
+            <Link href="/app" aria-label="KhuMình — về chợ"><Logo /></Link>
             <span className="text-fg-subtle">/</span>
             <Link href="/quan-ly" className="text-sm text-fg-muted hover:text-brand-ink">Quản lý khu</Link>
             <span className="text-fg-subtle">/</span>

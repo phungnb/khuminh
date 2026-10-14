@@ -1,31 +1,33 @@
 @import "tailwindcss";
 
 /* =========================================================
-   KhuMình design tokens — nền SÁNG + accent theo RaceHub.
-   Brand = Action Green #b6ff3b (nền nút, chữ tối), brand-ink = xanh
-   đậm đọc được trên nền sáng. Dùng qua class Tailwind: bg-bg, bg-surface,
-   text-fg-muted, bg-brand, text-brand-ink, border-border ...
+   KhuMình design tokens — cùng hệ với RaceHub (nền tối + Action Green).
+   Dùng qua class Tailwind: bg-bg, bg-surface, text-fg-muted, bg-brand,
+   text-brand-ink, border-border ... Đổi màu ở đây, không rải mã màu trong trang.
    ========================================================= */
 @theme {
-  --color-bg: #f4f6fb;
-  --color-surface: #ffffff;
-  --color-surface-2: #eef2f8;
-  --color-border: #e3e8f0;
+  --color-bg: #0a0d12;
+  --color-surface: #121720;
+  --color-surface-2: #1a2130;
+  --color-border: #263042;
 
-  --color-fg: #0e1726;
-  --color-fg-muted: #5b6676;
-  --color-fg-subtle: #8a94a3;
+  --color-fg: #f2f5f9;
+  --color-fg-muted: #9aa6b8;
+  --color-fg-subtle: #6b7689;
 
-  --color-brand: #b6ff3b; /* Action Green (nền) — RaceHub */
+  --color-brand: #b6ff3b; /* Action Green — RaceHub */
   --color-brand-strong: #9be52a;
   --color-brand-fg: #0a0d12; /* chữ trên nền brand */
-  --color-brand-ink: #3f6212; /* xanh đậm: chữ/link/viền trên nền sáng */
-  --color-brand-dark: #3f6212; /* tương thích class cũ text-brand-dark/bg-brand-dark */
+  --color-brand-ink: #b6ff3b; /* chữ/link nhấn trên nền tối */
+  --color-brand-dark: #b6ff3b; /* tương thích class cũ */
 
-  --color-coin: #b4700a;
-  --color-success: #15803d;
-  --color-warning: #b45309;
-  --color-danger: #dc2626;
+  --color-coin: #ffb020;
+  --color-xp: #7c9cff;
+  --color-live: #ff3b5c;
+  --color-epic: #a855f7;
+  --color-success: #22c55e;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
 
   --radius-card: 16px;
 
@@ -33,14 +35,19 @@
   --font-mono: var(--font-jetbrains), ui-monospace, monospace;
 
   --animate-fade-in: fade-in 0.25s ease-out both;
+  --animate-breath: breath 2.4s ease-in-out infinite;
 
+  @keyframes breath {
+    0%, 100% { box-shadow: 0 0 0 0 rgb(182 255 59 / 0.45); }
+    50%      { box-shadow: 0 0 0 10px rgb(182 255 59 / 0); }
+  }
   @keyframes fade-in {
     from { opacity: 0; transform: translateY(4px); }
     to   { opacity: 1; transform: none; }
   }
 }
 
-html { color-scheme: light; }
+html { color-scheme: dark; }
 
 body {
   background: var(--color-bg);
@@ -59,28 +66,29 @@ body {
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
 
-/* ---- Thành phần dùng chung ---- */
+/* ---- Thành phần dùng chung (layer components: class tiện ích như pl-10 ghi đè được) ---- */
+@layer components {
 .input {
-  @apply w-full rounded-xl border border-border bg-surface px-3 py-2 text-base text-fg outline-none
+  @apply w-full h-11 rounded-xl border border-border bg-surface-2 px-3 py-2 text-base text-fg outline-none placeholder:text-fg-subtle
          transition focus:border-brand-strong focus:ring-2 focus:ring-brand/40;
 }
 .label {
   @apply mb-1 block text-sm font-medium text-fg-muted;
 }
 .btn {
-  @apply inline-flex items-center justify-center gap-1 rounded-xl bg-brand px-4 py-2 text-sm font-semibold
-         text-brand-fg shadow-sm transition hover:bg-brand-strong active:scale-[0.98] disabled:opacity-50;
+  @apply inline-flex items-center justify-center gap-1 rounded-xl bg-brand px-4 py-2 min-h-11 text-[15px] font-semibold
+         text-brand-fg transition hover:bg-brand-strong active:scale-[0.98] disabled:opacity-50;
 }
 .btn-secondary {
-  @apply inline-flex items-center justify-center gap-1 rounded-xl border border-border bg-surface px-4 py-2
-         text-sm font-semibold text-fg transition hover:bg-surface-2 disabled:opacity-50;
+  @apply inline-flex items-center justify-center gap-1 rounded-xl border border-border bg-surface-2 px-4 py-2 min-h-11
+         text-[15px] font-semibold text-fg transition hover:border-fg-subtle disabled:opacity-50;
 }
 .btn-danger {
-  @apply inline-flex items-center justify-center gap-1 rounded-xl border border-red-200 bg-surface px-3 py-2
-         text-sm font-semibold text-danger transition hover:bg-red-50 disabled:opacity-50;
+  @apply inline-flex items-center justify-center gap-1 rounded-xl border border-danger/30 bg-danger/15 px-3 py-2 min-h-11
+         text-[15px] font-semibold text-danger transition hover:bg-danger/25 disabled:opacity-50;
 }
 .card {
-  @apply rounded-2xl border border-border bg-surface p-4 shadow-sm;
+  @apply rounded-[var(--radius-card)] border border-border bg-surface p-4;
 }
 .table {
   @apply w-full text-left text-sm;
@@ -92,6 +100,8 @@ body {
   @apply border-b border-border/60 px-2 py-2 align-top;
 }
 
+}
+
 /* ---- "Tường" cơ sở (xem khu trọ như một CLB của RaceHub) ---- */
 .club-wall {
   @apply relative overflow-hidden rounded-2xl p-5 text-white shadow-sm;
@@ -100,4 +110,17 @@ body {
   content: "";
   @apply pointer-events-none absolute inset-0;
   background: radial-gradient(120% 120% at 100% 0%, rgb(255 255 255 / 0.18), transparent 60%);
+}
+
+textarea.input { height: auto; }
+select.input { padding-right: 2rem; }
+
+@layer components {
+/* Chip lọc (bán kính, loại tin, danh mục) */
+.chip {
+  @apply inline-flex min-h-9 items-center gap-1.5 whitespace-nowrap rounded-full border border-border bg-surface px-3 text-sm font-medium text-fg-muted transition hover:text-fg;
+}
+.chip-on {
+  @apply border-brand bg-brand text-brand-fg hover:text-brand-fg;
+}
 }

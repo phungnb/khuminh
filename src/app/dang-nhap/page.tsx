@@ -1,12 +1,13 @@
 import Link from "next/link";
-import { Flash } from "@/components/ui";
+import { Flash, Logo } from "@/components/ui";
 import { loginAction } from "../auth-actions";
 
 export default async function Page({ searchParams }: { searchParams: Promise<{ loi?: string; ok?: string }> }) {
   const sp = await searchParams;
   return (
     <main className="mx-auto max-w-sm px-4 py-12">
-      <h1 className="mb-1 text-2xl font-bold text-brand-ink">KhuMình</h1>
+      <Link href="/" className="mb-6 inline-block"><Logo /></Link>
+      <h1 className="mb-1 text-2xl font-bold">Đăng nhập</h1>
       <p className="mb-6 text-sm text-fg-muted">Chợ tiện ích quanh nhà. Người thuê đăng nhập bằng số điện thoại, chủ trọ bằng email</p>
       <Flash params={sp} />
       <form action={loginAction} className="card space-y-3">

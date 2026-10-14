@@ -7,10 +7,12 @@ Cập nhật: 2026-10-13, thêm chợ quanh đây (rút từ code; mục [ASSUME
 - Kế hoạch: work/KM-CHO/PLAN.md (v2.0). KM-HUB-A v1.0 đã OUTDATED.
 
 ## Đang có (CONFIRMED từ code)
-- Chợ quanh đây (giai đoạn 1, nhánh claude/project-thread-a1sihe): trang chủ /app là chợ; tin đăng theo
+- Chợ quanh đây (giai đoạn 1, đã merge PR #2): trang chủ /app là chợ; tin đăng theo
   bán kính 1/3/10/20 km quanh tọa độ cơ sở; quan tâm → người đăng đồng ý mới lộ liên hệ; 3 báo cáo thì ẩn.
   Bảng listings/listing_contacts/listing_interests/listing_reports, RLS theo app.user_id (0006, 0007).
   Landing công khai `/`; module quản lý ở /quan-ly → /co-so/*.
+- Giao diện (PR #3, chờ duyệt): nền tối theo RaceHub, tab dưới 5 ô (Chợ, Nhà tôi, Đăng tin, Của tôi, Quản lý/Bảng tin),
+  tìm từ khóa + lọc danh mục, thẻ lưới, chia sẻ, nút gọi. Component chung: src/components/{ui,category,listing-card}.tsx.
 - Module quản lý trọ: cơ sở, phòng, hợp đồng thuê, kỳ, hóa đơn, thanh toán.
 - DB Drizzle/Postgres, migration trong drizzle/ (0000_init … 0005_staff_push_rls, 0006_market, 0007_market_rls).
 - Mô hình hai role: khuminh_app (chịu RLS) + khuminh_owner (chủ bảng, chỉ migrate).
