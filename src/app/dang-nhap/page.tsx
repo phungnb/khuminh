@@ -1,5 +1,7 @@
 import Link from "next/link";
+import { LegalFooter } from "@/components/legal-note";
 import { Flash, Logo } from "@/components/ui";
+import { supportContact } from "@/lib/support";
 import { loginAction } from "../auth-actions";
 
 export default async function Page({ searchParams }: { searchParams: Promise<{ loi?: string; ok?: string }> }) {
@@ -24,6 +26,10 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ l
       <p className="mt-4 text-center text-sm">
         Chưa có tài khoản? <Link className="font-semibold text-brand-ink" href="/dang-ky">Đăng ký miễn phí</Link>
       </p>
+      <p className="mt-2 text-center text-xs text-fg-subtle">
+        Quên mật khẩu? Người thuê: xin chủ nhà gửi link đặt lại. Chủ trọ: liên hệ hỗ trợ.
+      </p>
+      <LegalFooter support={supportContact()} />
     </main>
   );
 }

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { LegalNote } from "@/components/legal-note";
 import { Flash, Logo } from "@/components/ui";
 import { signupAction } from "../auth-actions";
 
@@ -28,6 +29,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ l
           <input className="input" id="password" name="password" type="password" minLength={8} autoComplete="new-password" required />
         </div>
         <button className="btn w-full">Đăng ký</button>
+        <LegalNote />
       </form>
       <p className="mt-4 text-center text-sm">
         Đã có tài khoản? <Link className="font-semibold text-brand-ink" href="/dang-nhap">Đăng nhập</Link>
