@@ -35,7 +35,7 @@ export default async function Page({
       <div className="relative -mx-4 -mt-4">
         <CategoryTile category={l.category} className="aspect-[16/10] w-full" iconClass="size-16" />
         <Link
-          href={sp.o ? `/app?o=${encodeURIComponent(sp.o)}` : "/app"}
+          href={sp.o ? `/app/quanh-day?o=${encodeURIComponent(sp.o)}` : "/app/quanh-day"}
           aria-label="Về chợ"
           className="absolute top-3 left-3 grid size-11 place-items-center rounded-full bg-black/40 text-white backdrop-blur"
         >

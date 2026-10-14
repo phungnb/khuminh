@@ -4,8 +4,6 @@ import { Badge, EmptyState, Flash } from "@/components/ui";
 import { PAYMENT_STATE_LABEL } from "@/domain/payments";
 import { dmy, vnd } from "@/lib/format";
 import { requireUser } from "@/lib/session";
-import { PushToggle } from "@/components/push-toggle";
-import { pushPublicKey } from "@/server/push";
 import { tenantHome } from "@/server/tenant";
 
 export const dynamic = "force-dynamic";
@@ -22,11 +20,11 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ l
       />
     );
   }
-  const publicKey = pushPublicKey();
   return (
     <>
+      <Link href="/app/toi" className="mb-3 inline-block text-sm text-fg-subtle">← Tôi</Link>
+      <h1 className="mb-4 text-xl font-bold">Nhà và nơi ở</h1>
       <Flash params={await searchParams} />
-      {publicKey ? <PushToggle publicKey={publicKey} /> : null}
       <Link href="/app/bang-tin" className="card mb-4 flex items-center gap-3 hover:border-fg-subtle">
         <span className="grid size-10 place-items-center rounded-full bg-surface-2 text-brand"><Megaphone className="size-5" aria-hidden /></span>
         <span className="min-w-0">
@@ -37,8 +35,8 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ l
       <Link href="/app/su-co" className="card mb-4 flex items-center gap-3 hover:border-fg-subtle">
         <span className="grid size-10 place-items-center rounded-full bg-surface-2 text-brand"><Wrench className="size-5" aria-hidden /></span>
         <span className="min-w-0">
-          <span className="block font-semibold">Báo sự cố</span>
-          <span className="block text-sm text-fg-subtle">Hỏng điện nước, đồ đạc: gửi chủ nhà, theo dõi xử lý</span>
+          <span className="block font-semibold">Sự cố và sửa chữa</span>
+          <span className="block text-sm text-fg-subtle">Báo hỏng điện nước, đồ đạc; xem các yêu cầu đã gửi</span>
         </span>
       </Link>
       {homes.map((h) => {
@@ -47,10 +45,10 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ l
         return (
           <section key={`${h.orgId}-${h.unitCode}-${h.propertyName}`} className={`mb-6 ${h.active ? "" : "opacity-70"}`}>
             <p className="text-sm text-fg-subtle">{h.propertyName}</p>
-            <h1 className="text-xl font-bold">
+            <h2 className="text-xl font-bold">
               Phòng {h.unitCode}
               {h.active ? null : <span className="ml-2 text-sm font-normal text-fg-subtle">(đã chuyển đi)</span>}
-            </h1>
+            </h2>
             <div className={`card mt-3 ${owed > 0 ? "border-warning/40 bg-warning/10" : ""}`}>
               {owed > 0 ? (
                 <>

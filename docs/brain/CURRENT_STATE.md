@@ -1,5 +1,5 @@
 # CURRENT_STATE — KhuMình
-Cập nhật: 2026-10-14, thêm KM-SC (báo sự cố) và chặn migrate trên Preview; KM-VH (vá lỗ trước khi dùng thật); trước đó 2026-10-13 thêm chợ quanh đây (rút từ code; mục [ASSUMED] là suy luận từ mã, cần anh xác nhận).
+Cập nhật: 2026-10-14, KM-HN (điều hướng 4 tab + trang Hôm nay, PR chờ duyệt); thêm KM-SC (báo sự cố) và chặn migrate trên Preview; KM-VH (vá lỗ trước khi dùng thật); trước đó 2026-10-13 thêm chợ quanh đây (rút từ code; mục [ASSUMED] là suy luận từ mã, cần anh xác nhận).
 
 ## Định vị sản phẩm (CONFIRMED, anh xác nhận 2026-10-13)
 - KhuMình = chợ tiện ích quanh nhà (mua bán, cho tặng, dịch vụ trong bán kính tới 20 km).
@@ -25,6 +25,11 @@ Cập nhật: 2026-10-14, thêm KM-SC (báo sự cố) và chặn migrate trên 
 - KM-SC (PR chờ duyệt, migration 0008_maintenance): người thuê báo sự cố ở /app/su-co (thẻ "Báo sự cố" trên Nhà tôi);
   chủ trọ/nhân viên được giao xử lý ở tab "Sự cố" của cơ sở (mới → đang xử lý → xong / từ chối kèm lý do), tổng quan cơ sở hiện số sự cố mở;
   thông báo đẩy hai chiều. Bảng maintenance_requests có RLS org_isolation; người thuê đi qua withOrg + lọc lease của mình. Không có ảnh.
+- KM-HN (PR chờ duyệt, chỉ giao diện, không migration): tab dưới Hôm nay / Quanh đây / [Đăng tin] / Tiện ích / Tôi.
+  /app = "Hôm nay có gì?" dựng từ dữ liệu đã có (hóa đơn còn nợ, sự cố mở + vừa xong 3 ngày, thông báo chủ trọ ≤ 14 ngày,
+  sự cố chưa xong của cơ sở mình quản lý, 4 tin chợ gần 3 km); không có nội dung mẫu. Chợ chuyển sang /app/quanh-day
+  (link cũ /app?o=… tự chuyển). "Nhà tôi" thành "Nhà và nơi ở" (/app/nha) trong Tôi (/app/toi). Logic chọn ở src/server/today.ts.
+  Định vị CHƯA đổi (vẫn theo PRD V1.0); phản biện: khuminh/KM-HN_phan-bien-v1.0.md trên thư mục project.
 - CHƯA có: giới hạn đăng nhập sai (anh quyết chưa làm), gửi email/OTP, giám sát lỗi, xác nhận sao lưu.
 
 ## Môi trường

@@ -2,35 +2,25 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Building2, Home, Megaphone, Plus, Store, User, type LucideIcon } from "lucide-react";
+import { LayoutGrid, MapPin, Plus, Sun, User } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { isActive, TABS } from "./nav";
 
-interface Tab {
-  href: string;
-  label: string;
-  icon: LucideIcon;
-  center?: boolean;
-}
+const ICONS = { today: Sun, near: MapPin, post: Plus, tools: LayoutGrid, me: User };
 
-// Thanh điều hướng dưới theo kiểu RaceHub: nút giữa nổi (Đăng tin) thay cho nút Chạy.
-export function BottomTabs({ manager }: { manager: boolean }) {
+// 4 tab chính + nút giữa nổi (Đăng tin) theo kiểu RaceHub.
+export function BottomTabs() {
   const pathname = usePathname();
-  const tabs: Tab[] = [
-    { href: "/app", label: "Chợ", icon: Store },
-    { href: "/app/nha", label: "Nhà tôi", icon: Home },
-    { href: "/app/dang-tin", label: "Đăng tin", icon: Plus, center: true },
-    { href: "/app/cua-toi", label: "Của tôi", icon: User },
-    manager ? { href: "/quan-ly", label: "Quản lý", icon: Building2 } : { href: "/app/bang-tin", label: "Bảng tin", icon: Megaphone },
-  ];
   return (
     <nav
       aria-label="Điều hướng chính"
       className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-bg/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-lg"
     >
       <ul className="mx-auto grid max-w-md grid-cols-5 items-end px-2">
-        {tabs.map(({ href, label, icon: Icon, center }) => {
-          const active =
-            href === "/app" ? pathname === "/app" || pathname.startsWith("/app/tin") : pathname === href || pathname.startsWith(`${href}/`);
+        {TABS.map((tab) => {
+          const { href, label, icon, center } = tab;
+          const Icon = ICONS[icon];
+          const active = isActive(tab, pathname);
           return (
             <li key={href} className="flex justify-center">
               <Link

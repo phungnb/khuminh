@@ -19,7 +19,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ l
   if (usable.length === 0) {
     return (
       <div className="card text-center text-sm text-fg-muted">
-        Bạn cần thuộc một khu đã có vị trí trên bản đồ để đăng tin. <Link className="font-semibold text-brand-ink" href="/app">Xem chợ</Link>
+        Bạn cần thuộc một khu đã có vị trí trên bản đồ để đăng tin. <Link className="font-semibold text-brand-ink" href="/app/quanh-day">Xem chợ</Link>
       </div>
     );
   }

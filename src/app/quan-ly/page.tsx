@@ -16,12 +16,12 @@ export default async function Page() {
       <header className="sticky top-0 z-40 border-b border-border bg-bg/85 backdrop-blur-md">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-2 px-4 py-3">
           <div className="flex items-center gap-2">
-            <Link href="/app" aria-label="KhuMình — về chợ"><Logo /></Link>
+            <Link href="/app" aria-label="KhuMình — Hôm nay"><Logo /></Link>
             <span className="text-fg-subtle">/</span>
             <span className="font-semibold">Quản lý khu</span>
           </div>
           <div className="flex items-center gap-3">
-            <Link href="/app" className="text-sm font-medium text-brand-ink">Về chợ</Link>
+            <Link href="/app" className="text-sm font-medium text-brand-ink">Về app</Link>
             <form action={logoutAction}>
               <button className="text-sm text-fg-subtle hover:text-fg">Đăng xuất</button>
             </form>

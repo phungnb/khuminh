@@ -1,133 +1,196 @@
 import Link from "next/link";
-import { MapPinOff, PackageSearch, Search, Store } from "lucide-react";
-import { CategoryIcon } from "@/components/category";
-import { ListingGrid } from "@/components/listing-card";
-import { EmptyState, Flash } from "@/components/ui";
+import { redirect } from "next/navigation";
+import { Building2, CheckCircle2, Hammer, Gift, Megaphone, ReceiptText, Store, Wrench, type LucideIcon } from "lucide-react";
+import { ago, ListingGrid } from "@/components/listing-card";
+import { Badge, EmptyState, Flash } from "@/components/ui";
+import { PAYMENT_STATE_LABEL } from "@/domain/payments";
 import { wallBackground } from "@/lib/club-themes";
-import { parseRadius, RADII_KM } from "@/lib/geo";
-import { cn } from "@/lib/cn";
+import { dmy, vnd } from "@/lib/format";
+import { DEFAULT_RADIUS_KM } from "@/lib/geo";
 import { requireUser } from "@/lib/session";
-import { CATEGORIES, LISTING_KIND_LABEL, marketPlaces, searchListings, type ListingKind, type Place } from "@/server/market";
+import { actorFor } from "@/server/auth";
+import { listPosts, tenantBoardViewer, type PostRow } from "@/server/board";
+import { MAINTENANCE_STATUS_LABEL, openMaintenanceCount, tenantMaintenanceRequests } from "@/server/maintenance";
+import { marketPlaces, searchListings } from "@/server/market";
+import { tenantHome } from "@/server/tenant";
+import { dueInvoices, freshAnnouncements, incidentsToShow } from "@/server/today";
 
 export const dynamic = "force-dynamic";
 
 type Sp = { loi?: string; ok?: string; o?: string; r?: string; k?: string; c?: string; q?: string };
 
+// "Hôm nay có gì?": việc cần chú ý, thông báo khu, tin chợ gần. Chỉ dựng từ dữ liệu thật đã có,
+// phần nào không có dữ liệu thì ẩn, không lấp bằng nội dung mẫu.
 export default async function Page({ searchParams }: { searchParams: Promise<Sp> }) {
   const sp = await searchParams;
-  const user = await requireUser();
-  const places = await marketPlaces(user.id);
-  const usable = places.filter((p) => p.location);
-
-  if (usable.length === 0) return <NoPlace places={places} />;
-
-  const place = usable.find((p) => p.key === sp.o) ?? usable[0]!;
-  const radius = parseRadius(sp.r);
-  const kind = sp.k && sp.k in LISTING_KIND_LABEL ? (sp.k as ListingKind) : undefined;
-  const category = sp.c && (CATEGORIES as readonly string[]).includes(sp.c) ? sp.c : undefined;
-  const q = sp.q?.trim() || undefined;
-  const items = await searchListings(user.id, place.location!, radius, { kind, category, q });
-
-  const state: Record<string, string | undefined> = { o: place.key, r: String(radius), k: kind, c: category, q };
-  const href = (o: Record<string, string | undefined>) => {
+  // Link chợ cũ (/app?o=…&r=…) vẫn mở đúng chợ.
+  if (sp.o || sp.r || sp.k || sp.c || sp.q) {
     const p = new URLSearchParams();
-    for (const [k, v] of Object.entries({ ...state, ...o })) if (v) p.set(k, v);
-    return `/app?${p.toString()}`;
-  };
-  const back = `?o=${encodeURIComponent(place.key)}`;
+    for (const k of ["o", "r", "k", "c", "q"] as const) if (sp[k]) p.set(k, sp[k]!);
+    redirect(`/app/quanh-day?${p.toString()}`);
+  }
+
+  const user = await requireUser();
+  const now = new Date();
+  const [homes, requests, places] = await Promise.all([tenantHome(user.id), tenantMaintenanceRequests(user.id), marketPlaces(user.id)]);
+
+  const activeHomes = [...new Map(homes.filter((h) => h.active).map((h) => [`${h.orgId}.${h.propertyId}`, h])).values()];
+  const tenant = activeHomes.length > 0;
+  const managed = places.filter((p) => p.role === "manager");
+  const place = places.find((p) => p.location && p.role === "tenant") ?? places.find((p) => p.location);
+
+  const [boards, managerIncidents, nearby] = await Promise.all([
+    Promise.all(
+      activeHomes.map(async (h) => (await listPosts(await tenantBoardViewer(user.id, h.orgId, h.propertyId), 20)).map((p) => ({ ...p, place: h.propertyName }))),
+    ),
+    Promise.all(
+      managed.map(async (p) => {
+        const [orgId, propertyId] = p.key.split(".") as [string, string];
+        const actor = await actorFor(user.id, orgId);
+        return { name: p.name, propertyId, open: actor ? await openMaintenanceCount(actor, propertyId) : 0 };
+      }),
+    ),
+    place ? searchListings(user.id, place.location!, DEFAULT_RADIUS_KM, {}, 4) : Promise.resolve([]),
+  ]);
+
+  const due = dueInvoices(homes);
+  const incidents = incidentsToShow(requests, now);
+  const announcements = freshAnnouncements(boards.flat(), now) as Array<PostRow & { place: string }>;
+  const managerOpen = managerIncidents.filter((m) => m.open > 0);
+  const attention = due.length + incidents.filter((r) => r.status === "open" || r.status === "in_progress").length + managerOpen.length;
+
+  const shortcuts: Array<{ href: string; label: string; icon: LucideIcon }> = [
+    tenant ? { href: "/app/su-co", label: "Báo sự cố", icon: Wrench } : null,
+    managed.length > 0 ? { href: "/quan-ly", label: "Quản lý khu", icon: Building2 } : null,
+    { href: "/app/quanh-day?k=service", label: "Tìm dịch vụ", icon: Hammer },
+    { href: "/app/quanh-day?k=give", label: "Cho tặng", icon: Gift },
+    tenant ? { href: "/app/bang-tin", label: "Bảng tin khu", icon: Megaphone } : null,
+  ].filter((s): s is NonNullable<typeof s> => s !== null);
+
+  const today = now.toLocaleDateString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh", weekday: "long", day: "2-digit", month: "2-digit" });
+  const wallId = (activeHomes[0]?.propertyId ?? place?.key.split(".")[1] ?? user.id) as string;
 
   return (
     <>
-      <section className="club-wall animate-fade-in" style={{ background: wallBackground(place.key.split(".")[1]!) }}>
+      <section className="club-wall animate-fade-in" style={{ background: wallBackground(wallId) }}>
         <div className="relative z-[1]">
-          <div className="text-[11px] font-semibold uppercase tracking-wide text-white/70">Chợ quanh đây</div>
-          <h1 className="truncate text-2xl leading-tight font-bold">{place.name}</h1>
-          <p className="mt-0.5 text-sm text-white/80">
-            {items.length} tin trong {radius} km · mua bán, cho tặng, dịch vụ
+          <div className="text-[11px] font-semibold uppercase tracking-wide text-white/70">{today}</div>
+          <h1 className="text-2xl leading-tight font-bold">Hôm nay có gì?</h1>
+          <p className="mt-0.5 truncate text-sm text-white/80">
+            {place ? place.name : "Quanh nơi bạn sống"}
+            {" · "}
+            {attention > 0 ? `${attention} việc cần chú ý` : "không có việc cần xử lý"}
           </p>
-          <div className="mt-3 flex gap-1.5">
-            {RADII_KM.map((r) => (
-              <Link
-                key={r}
-                href={href({ r: String(r) })}
-                className={cn(
-                  "rounded-full px-3 py-1 text-xs font-semibold backdrop-blur",
-                  r === radius ? "bg-brand text-brand-fg" : "bg-white/15 text-white",
-                )}
-              >
-                {r} km
-              </Link>
-            ))}
-          </div>
-          {usable.length > 1 ? (
-            <div className="scrollbar-none mt-3 flex gap-2 overflow-x-auto">
-              {usable.map((p) => (
-                <Link
-                  key={p.key}
-                  href={href({ o: p.key })}
-                  className={cn(
-                    "rounded-full px-3 py-1 text-xs font-semibold whitespace-nowrap backdrop-blur",
-                    p.key === place.key ? "bg-white text-black" : "bg-white/15 text-white",
-                  )}
-                >
-                  {p.name}
-                </Link>
-              ))}
-            </div>
-          ) : null}
         </div>
       </section>
 
-      <form action="/app" className="relative mt-4">
-        {Object.entries({ o: place.key, r: String(radius), k: kind, c: category }).map(([k, v]) =>
-          v ? <input key={k} type="hidden" name={k} value={v} /> : null,
-        )}
-        <Search className="pointer-events-none absolute top-1/2 left-3 size-5 -translate-y-1/2 text-fg-subtle" aria-hidden />
-        <input className="input pl-10" name="q" defaultValue={q} placeholder="Tìm quạt, xe đạp, sửa điện…" aria-label="Tìm tin" />
-      </form>
-
       <Flash params={sp} />
 
-      <div className="scrollbar-none mt-3 -mx-4 flex gap-2 overflow-x-auto px-4">
-        <Link href={href({ k: undefined })} className={cn("chip", !kind && "chip-on")}>Tất cả</Link>
-        {(Object.keys(LISTING_KIND_LABEL) as ListingKind[]).map((k) => (
-          <Link key={k} href={href({ k })} className={cn("chip", k === kind && "chip-on")}>
-            {LISTING_KIND_LABEL[k]}
-          </Link>
-        ))}
-      </div>
-
-      <div className="scrollbar-none mt-3 -mx-4 flex gap-3 overflow-x-auto px-4">
-        {CATEGORIES.map((c) => (
-          <Link
-            key={c}
-            href={href({ c: c === category ? undefined : c })}
-            className="flex w-16 shrink-0 flex-col items-center gap-1 text-center text-[11px] leading-tight text-fg-muted"
-          >
-            <span
-              className={cn(
-                "grid size-12 place-items-center rounded-2xl border",
-                c === category ? "border-brand bg-brand text-brand-fg" : "border-border bg-surface text-fg",
-              )}
-            >
-              <CategoryIcon category={c} className="size-5" />
+      <nav aria-label="Lối tắt" className="mt-4 grid grid-cols-4 gap-2">
+        {shortcuts.slice(0, 4).map(({ href, label, icon: Icon }) => (
+          <Link key={href} href={href} className="flex flex-col items-center gap-1 text-center text-[11px] leading-tight text-fg-muted">
+            <span className="grid size-12 place-items-center rounded-2xl border border-border bg-surface text-brand-ink">
+              <Icon className="size-5" aria-hidden />
             </span>
-            <span className={cn("line-clamp-2", c === category && "font-semibold text-brand")}>{c}</span>
+            {label}
           </Link>
         ))}
+      </nav>
+
+      <h2 className="mt-6 mb-2 text-lg font-semibold">Cần bạn chú ý</h2>
+      {attention === 0 && incidents.length === 0 ? (
+        <div className="card flex items-center gap-3 text-sm text-fg-muted">
+          <CheckCircle2 className="size-5 shrink-0 text-success" aria-hidden />
+          {tenant || managed.length > 0 ? "Không có hóa đơn đến hạn hay sự cố nào đang chờ." : "Khi bạn thuê phòng qua KhuMình, hóa đơn và sự cố sẽ hiện ở đây."}
+        </div>
+      ) : (
+        <ul className="space-y-2">
+          {due.map((d) => (
+            <li key={d.invoice.id}>
+              <Link
+                href={`/app/hoa-don/${d.invoice.id}`}
+                className={`card flex items-center gap-3 hover:border-fg-subtle ${d.invoice.state === "overdue" ? "border-danger/40" : "border-warning/40"}`}
+              >
+                <ReceiptText className="size-5 shrink-0 text-warning" aria-hidden />
+                <span className="min-w-0 flex-1">
+                  <span className="block font-semibold">
+                    Hóa đơn tháng {d.invoice.periodLabel} · {vnd(d.owed)}
+                  </span>
+                  <span className="block text-xs text-fg-subtle">
+                    Phòng {d.unitCode} · hạn {dmy(d.invoice.dueDate)}
+                  </span>
+                </span>
+                <Badge state={d.invoice.state}>{PAYMENT_STATE_LABEL[d.invoice.state]}</Badge>
+              </Link>
+            </li>
+          ))}
+          {managerOpen.map((m) => (
+            <li key={m.propertyId}>
+              <Link href={`/co-so/${m.propertyId}/su-co`} className="card flex items-center gap-3 border-warning/40 hover:border-fg-subtle">
+                <Wrench className="size-5 shrink-0 text-warning" aria-hidden />
+                <span className="min-w-0 flex-1">
+                  <span className="block font-semibold">{m.open} sự cố chưa xong</span>
+                  <span className="block truncate text-xs text-fg-subtle">{m.name} · bạn quản lý</span>
+                </span>
+              </Link>
+            </li>
+          ))}
+          {incidents.map((r) => (
+            <li key={r.id}>
+              <Link href="/app/su-co" className="card flex items-center gap-3 hover:border-fg-subtle">
+                <Wrench className="size-5 shrink-0 text-fg-subtle" aria-hidden />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate font-semibold">
+                    {r.urgent ? "Gấp: " : ""}
+                    {r.title}
+                  </span>
+                  <span className="block text-xs text-fg-subtle">Phòng {r.unitCode} · báo {ago(r.createdAt)}</span>
+                </span>
+                <Badge state={r.status}>{MAINTENANCE_STATUS_LABEL[r.status]}</Badge>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {announcements.length > 0 ? (
+        <>
+          <h2 className="mt-6 mb-2 text-lg font-semibold">Thông báo từ khu</h2>
+          <ul className="space-y-2">
+            {announcements.slice(0, 3).map((p) => (
+              <li key={p.id}>
+                <Link href="/app/bang-tin" className="card block hover:border-fg-subtle">
+                  <span className="block font-semibold">{p.title}</span>
+                  {p.body ? <span className="mt-0.5 line-clamp-2 block text-sm text-fg-muted">{p.body}</span> : null}
+                  <span className="mt-1 block text-xs text-fg-subtle">
+                    {p.place} · {p.authorName} · {ago(p.createdAt)}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </>
+      ) : null}
+
+      <div className="mt-6 mb-2 flex items-baseline justify-between">
+        <h2 className="text-lg font-semibold">Quanh bạn {DEFAULT_RADIUS_KM} km</h2>
+        {place ? (
+          <Link href="/app/quanh-day" className="text-sm font-medium text-brand-ink">
+            Xem tất cả
+          </Link>
+        ) : null}
       </div>
-
-      <h2 className="mt-5 mb-3 text-lg font-semibold">{q ? `Kết quả cho “${q}”` : category ?? "Tin mới quanh bạn"}</h2>
-
-      {items.length === 0 ? (
+      {!place ? (
         <EmptyState
-          icon={q || category || kind ? PackageSearch : Store}
-          title={q || category || kind ? "Không có tin phù hợp" : `Chưa có tin nào trong ${radius} km`}
-          description={
-            q || category || kind
-              ? "Thử bỏ bộ lọc hoặc mở rộng bán kính."
-              : "Đồ cũ còn dùng được, món ăn tự nấu, nhận sửa đồ… đăng tin đầu tiên cho hàng xóm."
-          }
+          icon={Store}
+          title="Chưa có khu trên bản đồ"
+          description="Tin mua bán, cho tặng, dịch vụ quanh nhà hiện khi khu của bạn có vị trí. Nhờ chủ nhà gửi link mời hoặc đặt vị trí cơ sở."
+        />
+      ) : nearby.length === 0 ? (
+        <EmptyState
+          icon={Store}
+          title="Chưa có tin nào gần đây"
+          description="Đồ cũ còn dùng được, món tự nấu, nhận sửa đồ: đăng tin đầu tiên cho hàng xóm."
           action={
             <Link href="/app/dang-tin" className="btn">
               Đăng tin
@@ -135,37 +198,8 @@ export default async function Page({ searchParams }: { searchParams: Promise<Sp>
           }
         />
       ) : (
-        <ListingGrid items={items} query={back} />
+        <ListingGrid items={nearby} query={`?o=${encodeURIComponent(place.key)}`} />
       )}
     </>
-  );
-}
-
-function NoPlace({ places }: { places: Place[] }) {
-  const manager = places.find((p) => p.role === "manager");
-  if (places.length === 0) {
-    return (
-      <EmptyState
-        icon={Store}
-        title="Chợ quanh đây"
-        description="Chợ đang mở cho cư dân các khu trọ, chung cư dùng KhuMình. Nhờ chủ nhà gửi link mời để vào khu của bạn."
-      />
-    );
-  }
-  return (
-    <EmptyState
-      icon={MapPinOff}
-      title="Khu chưa có vị trí trên bản đồ"
-      description={
-        manager ? "Đặt vị trí cho cơ sở để cư dân thấy tin quanh đây." : `Nhờ chủ nhà cập nhật vị trí ${places[0]!.name} để dùng chợ.`
-      }
-      action={
-        manager ? (
-          <Link className="btn" href={`/co-so/${manager.key.split(".")[1]}/bieu-phi#vi-tri`}>
-            Đặt vị trí {manager.name}
-          </Link>
-        ) : undefined
-      }
-    />
   );
 }
