@@ -3,10 +3,20 @@
 // 2. Chạy migration bằng tài khoản chủ bảng (DATABASE_URL).
 // 3. Cấp quyền cho khuminh_app trên mọi bảng hiện có.
 // Chạy lại nhiều lần không sao.
+//
+// Bản Preview trên Vercel (mỗi nhánh/PR) KHÔNG chạy bước này: chưa xác minh được Preview dùng DB
+// riêng, nên một nhánh có migration chưa duyệt không được phép chạm DB. Chỉ Production (sau merge)
+// và máy local/CI (không có VERCEL_ENV) mới migrate. Hệ quả: tính năng cần bảng mới sẽ lỗi trên
+// Preview cho tới khi merge.
 
 import { drizzle } from "drizzle-orm/postgres-js";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
 import postgres from "postgres";
+
+if (process.env.VERCEL_ENV === "preview") {
+  console.log("Bỏ qua setup-db trên Vercel Preview (không migrate DB từ nhánh chưa duyệt)");
+  process.exit(0);
+}
 
 const url = process.env.DATABASE_URL;
 const appPassword = process.env.APP_DB_PASSWORD;
