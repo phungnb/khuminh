@@ -5,6 +5,7 @@ import { parseMoney } from "@/lib/format";
 import { requireUser } from "@/lib/session";
 import { UserError } from "@/server/audit";
 import { closePost, createPost, tenantBoardViewer, type PostKind } from "@/server/board";
+import { createMaintenanceRequest } from "@/server/maintenance";
 import { removeSubscription, saveSubscription } from "@/server/push";
 
 const str = (f: FormData, k: string) => String(f.get(k) ?? "").trim();
@@ -49,4 +50,15 @@ export async function removePushAction(endpoint: string): Promise<boolean> {
   const user = await requireUser();
   await removeSubscription(user.id, endpoint);
   return true;
+}
+
+export async function tenantReportIssueAction(f: FormData) {
+  const user = await requireUser();
+  await runAction("/app/su-co", async () => {
+    await createMaintenanceRequest(user.id, str(f, "leaseId"), {
+      title: str(f, "title"),
+      body: str(f, "body"),
+      urgent: str(f, "urgent") === "1",
+    });
+  }, "Đã gửi cho chủ nhà");
 }

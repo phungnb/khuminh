@@ -303,7 +303,7 @@ export async function tenantInvoice(userId: string, invoiceId: string): Promise<
   return null;
 }
 
-function groupLinks(links: Array<{ orgId: string; tenantId: string }>): Map<string, string[]> {
+export function groupLinks(links: Array<{ orgId: string; tenantId: string }>): Map<string, string[]> {
   const m = new Map<string, string[]>();
   for (const l of links) m.set(l.orgId, [...(m.get(l.orgId) ?? []), l.tenantId]);
   return m;

@@ -24,8 +24,12 @@ Cập nhật: 2026-10-14 (KM-VH). Mục [UNKNOWN] cần anh điền.
 
 ## 4. Đo
 `DATABASE_URL=<chủ bảng> npx tsx scripts/metrics.ts 4` (giao dịch chỉ đọc). Ngưỡng đã đặt trong OPEN_QUESTIONS:
-≥ 40% người thuê có tài khoản; ≥ 1 tin chợ/khu/tuần; ≥ 20% tin có quan tâm. Giới hạn: lượt xem hóa đơn trong app người thuê chưa được đếm, chỉ đếm link.
+≥ 40% người thuê có tài khoản; ≥ 1 tin chợ/khu/tuần; ≥ 20% tin có quan tâm. Cột "Sự cố báo (đang mở)" cho biết người thuê có dùng báo sự cố trong app không. Giới hạn: lượt xem hóa đơn trong app người thuê chưa được đếm, chỉ đếm link.
 
 ## 5. Hỗ trợ
 Đặt `NEXT_PUBLIC_SUPPORT_CONTACT` (Zalo/SĐT) trên Vercel; hiện ở chân trang, điều khoản, riêng tư. Chưa đặt thì ẩn.
 Trang /dieu-khoan và /rieng-tu là BẢN NHÁP, cần anh duyệt nội dung.
+
+## 6. Sự cố và bản Preview
+- Người thuê báo sự cố trong app; chủ trọ và nhân viên được giao cơ sở nhận thông báo đẩy, xử lý ở tab "Sự cố". Sự cố đã xong/từ chối không mở lại được: người thuê gửi yêu cầu mới.
+- Bản Preview trên Vercel KHÔNG chạy migration. Trang dùng bảng mới sẽ lỗi trên Preview tới khi merge; muốn thử trước thì dùng DB riêng cho Preview và gỡ chặn trong scripts/setup-db.ts.

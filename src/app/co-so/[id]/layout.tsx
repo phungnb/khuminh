@@ -10,6 +10,7 @@ const TABS = [
   { href: "/phong", label: "Phòng" },
   { href: "/chi-so", label: "Chỉ số" },
   { href: "/ky", label: "Hóa đơn" },
+  { href: "/su-co", label: "Sự cố" },
   { href: "/bang-tin", label: "Bảng tin" },
   { href: "/bieu-phi", label: "Cài đặt" },
 ];

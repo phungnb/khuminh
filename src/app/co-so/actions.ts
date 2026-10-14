@@ -299,3 +299,12 @@ export async function setLocationAction(f: FormData) {
     await setPropertyLocation(actor, id, loc);
   }, "Đã lưu vị trí");
 }
+
+export async function updateMaintenanceAction(f: FormData) {
+  const actor = await requireActor();
+  const back = `/co-so/${str(f, "propertyId")}/su-co`;
+  await runAction(back, async () => {
+    const { updateMaintenanceStatus } = await import("@/server/maintenance");
+    await updateMaintenanceStatus(actor, str(f, "requestId"), str(f, "status") as "in_progress" | "done" | "rejected", str(f, "note"));
+  }, "Đã cập nhật, người thuê sẽ nhận thông báo");
+}

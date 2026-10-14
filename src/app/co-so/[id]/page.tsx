@@ -3,6 +3,7 @@ import { CoSoWall } from "@/components/co-so-wall";
 import { Flash, Stat } from "@/components/ui";
 import { dmy, vnd } from "@/lib/format";
 import { requireActor } from "@/lib/session";
+import { openMaintenanceCount } from "@/server/maintenance";
 import { dashboard, getProperty } from "@/server/queries";
 
 export default async function Page({
@@ -14,7 +15,7 @@ export default async function Page({
 }) {
   const { id } = await params;
   const actor = await requireActor();
-  const [property, d] = await Promise.all([getProperty(actor, id), dashboard(actor, id)]);
+  const [property, d, issues] = await Promise.all([getProperty(actor, id), dashboard(actor, id), openMaintenanceCount(actor, id)]);
   return (
     <>
       <CoSoWall
@@ -30,6 +31,11 @@ export default async function Page({
           Cơ sở chưa có vị trí nên cư dân chưa dùng được Chợ quanh đây.{" "}
           <Link className="font-semibold underline" href={`/co-so/${id}/bieu-phi#vi-tri`}>Đặt vị trí</Link>
         </div>
+      ) : null}
+      {issues > 0 ? (
+        <Link href={`/co-so/${id}/su-co`} className="mt-4 block rounded-md border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">
+          {issues} sự cố đang chờ xử lý. <span className="font-semibold underline">Xem</span>
+        </Link>
       ) : null}
       <div className="mt-4 mb-4 flex items-center justify-between gap-2">
         <h2 className="font-semibold">Tổng quan</h2>

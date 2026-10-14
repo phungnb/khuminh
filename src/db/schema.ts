@@ -413,6 +413,34 @@ export const posts = pgTable(
   (t) => [index("posts_property").on(t.propertyId, t.createdAt)],
 );
 
+// ---------- Báo sự cố (yêu cầu sửa chữa) ----------
+// Người thuê đang ở báo sự cố phòng; chủ trọ/nhân viên của cơ sở xử lý. RLS theo tổ chức
+// (org_isolation); quyền theo cơ sở/phòng kiểm ở src/server/maintenance.ts.
+
+export const maintenanceStatus = pgEnum("maintenance_status", ["open", "in_progress", "done", "rejected"]);
+
+export const maintenanceRequests = pgTable(
+  "maintenance_requests",
+  {
+    id: id(),
+    orgId: orgId(),
+    propertyId: uuid("property_id").notNull().references(() => properties.id),
+    unitId: uuid("unit_id").notNull().references(() => units.id),
+    leaseId: uuid("lease_id").notNull().references(() => leases.id),
+    createdBy: uuid("created_by").notNull().references(() => users.id),
+    title: text("title").notNull(),
+    body: text("body"),
+    urgent: boolean("urgent").notNull().default(false),
+    status: maintenanceStatus("status").notNull().default("open"),
+    /** Ghi chú xử lý của chủ trọ/nhân viên; bắt buộc khi từ chối. */
+    resolutionNote: text("resolution_note"),
+    resolvedBy: uuid("resolved_by").references(() => users.id),
+    resolvedAt: timestamp("resolved_at", { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [index("maintenance_property").on(t.propertyId, t.createdAt), index("maintenance_lease").on(t.leaseId)],
+);
+
 // ---------- Nhật ký ----------
 
 export const auditLogs = pgTable(

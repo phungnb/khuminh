@@ -49,6 +49,11 @@ const STATE_STYLE: Record<string, string> = {
   partial: "bg-xp/15 text-xp",
   paid: "bg-success/15 text-success",
   overdue: "bg-danger/15 text-danger",
+  // Báo sự cố
+  open: "bg-warning/15 text-warning",
+  in_progress: "bg-xp/15 text-xp",
+  done: "bg-success/15 text-success",
+  rejected: "bg-surface-2 text-fg-subtle",
 };
 
 export function Badge({ state, children }: { state: string; children: React.ReactNode }) {
