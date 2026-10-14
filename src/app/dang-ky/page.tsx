@@ -1,15 +1,12 @@
 import Link from "next/link";
 import { LegalNote } from "@/components/legal-note";
-import { Flash, Logo } from "@/components/ui";
+import { AuthShell, Flash } from "@/components/ui";
 import { signupAction } from "../auth-actions";
 
 export default async function Page({ searchParams }: { searchParams: Promise<{ loi?: string }> }) {
   const sp = await searchParams;
   return (
-    <main className="mx-auto max-w-sm px-4 py-12">
-      <Link href="/" className="mb-6 inline-block"><Logo /></Link>
-      <h1 className="mb-1 text-2xl font-bold">Tạo tài khoản chủ trọ</h1>
-      <p className="mb-6 text-sm text-fg-muted">Chủ trọ, chung cư mini: quản lý phòng, hóa đơn miễn phí và mở chợ cho cư dân</p>
+    <AuthShell title="Tạo tài khoản chủ trọ" subtitle="Chủ trọ, chung cư mini: quản lý phòng, hóa đơn miễn phí và mở chợ cho cư dân.">
       <Flash params={sp} />
       <form action={signupAction} className="card space-y-3">
         <div>
@@ -34,6 +31,6 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ l
       <p className="mt-4 text-center text-sm">
         Đã có tài khoản? <Link className="font-semibold text-brand-ink" href="/dang-nhap">Đăng nhập</Link>
       </p>
-    </main>
+    </AuthShell>
   );
 }

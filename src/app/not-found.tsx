@@ -1,11 +1,16 @@
+import { SearchX } from "lucide-react";
 import Link from "next/link";
+import { AuthShell, EmptyState } from "@/components/ui";
 
 export default function NotFound() {
   return (
-    <main className="mx-auto max-w-sm px-4 py-16 text-center">
-      <h1 className="text-lg font-bold">Không tìm thấy trang</h1>
-      <p className="mt-2 text-sm text-fg-muted">Đường dẫn sai, đã hết hạn, hoặc bạn không có quyền xem trang này.</p>
-      <Link className="btn mt-4 inline-block" href="/">Về trang chủ</Link>
-    </main>
+    <AuthShell>
+      <EmptyState
+        icon={SearchX}
+        title="Không tìm thấy trang"
+        description="Trang này không tồn tại, đã bị gỡ hoặc bạn không có quyền xem."
+        action={<Link className="btn" href="/app">Về chợ</Link>}
+      />
+    </AuthShell>
   );
 }
