@@ -1,16 +1,13 @@
 import Link from "next/link";
 import { LegalFooter } from "@/components/legal-note";
-import { Flash, Logo } from "@/components/ui";
+import { AuthShell, Flash } from "@/components/ui";
 import { supportContact } from "@/lib/support";
 import { loginAction } from "../auth-actions";
 
 export default async function Page({ searchParams }: { searchParams: Promise<{ loi?: string; ok?: string }> }) {
   const sp = await searchParams;
   return (
-    <main className="mx-auto max-w-sm px-4 py-12">
-      <Link href="/" className="mb-6 inline-block"><Logo /></Link>
-      <h1 className="mb-1 text-2xl font-bold">Đăng nhập</h1>
-      <p className="mb-6 text-sm text-fg-muted">Chợ tiện ích quanh nhà. Người thuê đăng nhập bằng số điện thoại, chủ trọ bằng email</p>
+    <AuthShell title="Đăng nhập" subtitle="Chợ tiện ích quanh nhà. Người thuê đăng nhập bằng số điện thoại, chủ trọ bằng email.">
       <Flash params={sp} />
       <form action={loginAction} className="card space-y-3">
         <div>
@@ -30,6 +27,6 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ l
         Quên mật khẩu? Người thuê: xin chủ nhà gửi link đặt lại. Chủ trọ: liên hệ hỗ trợ.
       </p>
       <LegalFooter support={supportContact()} />
-    </main>
+    </AuthShell>
   );
 }
