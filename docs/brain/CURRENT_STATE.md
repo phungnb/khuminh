@@ -22,7 +22,7 @@ Cập nhật: 2026-10-14, thêm KM-VH (vá lỗ trước khi dùng thật); trư
 - KM-VH (PR chờ duyệt): người thuê quên mật khẩu → chủ trọ cấp link đặt lại (dùng bảng tenant_invites, không migration);
   nhận lời mời phải đúng SĐT chủ trọ đã ghi; mật khẩu mới ≥ 8 ký tự; trang /dieu-khoan, /rieng-tu (bản nháp);
   error/not-found/loading toàn cục; scripts/reset-password.ts, scripts/metrics.ts. Vận hành: docs/brain/VAN_HANH.md.
-- CHƯA có: giới hạn đăng nhập sai (cần migration, chờ duyệt), gửi email/OTP, giám sát lỗi, xác nhận sao lưu.
+- CHƯA có: giới hạn đăng nhập sai (anh quyết chưa làm), gửi email/OTP, giám sát lỗi, xác nhận sao lưu.
 
 ## Môi trường
 - Triển khai: Vercel (vercel-build chạy setup-db trước next build). [ASSUMED]
