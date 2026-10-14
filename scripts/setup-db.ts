@@ -43,8 +43,10 @@ await sql.unsafe(`
   GRANT EXECUTE ON FUNCTION resolve_tenant_invite(text) TO khuminh_app;
   GRANT EXECUTE ON FUNCTION resolve_staff_invite(text) TO khuminh_app;
   GRANT EXECUTE ON FUNCTION is_platform_admin(), admin_stats(), admin_reported_listings(int) TO khuminh_app;
+  GRANT EXECUTE ON FUNCTION admin_set_listing_hidden(uuid, boolean, text), admin_set_user_locked(uuid, boolean, text),
+    admin_recent_actions(int) TO khuminh_app;
   -- Danh sách admin: app không được chạm (lệnh GRANT ALL TABLES ở trên vô tình cấp lại). RLS không policy vẫn chặn thêm một lớp.
-  REVOKE ALL ON platform_admins FROM khuminh_app;
+  REVOKE ALL ON platform_admins, admin_actions FROM khuminh_app;
 `);
 await sql.end();
 console.log("CSDL sẵn sàng");

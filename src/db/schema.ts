@@ -31,6 +31,8 @@ export const users = pgTable("users", {
   phone: text("phone").unique(),
   displayName: text("display_name").notNull(),
   passwordHash: text("password_hash"),
+  /** Admin nền tảng khóa (spam/lừa đảo): không đăng nhập được, phiên cũ hết hiệu lực. */
+  lockedAt: timestamp("locked_at", { withTimezone: true }),
   createdAt: createdAt(),
 });
 
@@ -50,6 +52,21 @@ export const platformAdmins = pgTable("platform_admins", {
   userId: uuid("user_id")
     .primaryKey()
     .references(() => users.id, { onDelete: "cascade" }),
+  createdAt: createdAt(),
+});
+
+/**
+ * Nhật ký thao tác admin nền tảng (ẩn tin, khóa tài khoản). Không thuộc tổ chức nào nên không dùng audit_logs.
+ * Bật RLS, KHÔNG có policy: chỉ hàm SECURITY DEFINER admin_* ghi/đọc (drizzle/0010_admin_actions.sql).
+ */
+export const adminActions = pgTable("admin_actions", {
+  id: id(),
+  adminUserId: uuid("admin_user_id")
+    .notNull()
+    .references(() => users.id),
+  action: text("action").notNull(),
+  targetId: uuid("target_id").notNull(),
+  reason: text("reason"),
   createdAt: createdAt(),
 });
 

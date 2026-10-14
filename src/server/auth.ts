@@ -3,7 +3,7 @@
 
 import { createHash, randomBytes, scrypt as scryptCb, timingSafeEqual } from "node:crypto";
 import { promisify } from "node:util";
-import { and, eq, gt } from "drizzle-orm";
+import { and, eq, gt, isNull } from "drizzle-orm";
 import { getDb, withOrg, withUser } from "@/db/client";
 import { memberships, organizations, sessions, users } from "@/db/schema";
 import { UserError, type Actor } from "./audit";
@@ -78,8 +78,12 @@ export async function signIn(login: string, password: string): Promise<{ userId:
     .from(users)
     .where(phone ? eq(users.phone, phone) : eq(users.email, normalizeEmail(login)));
   if (!user?.passwordHash || !(await verifyPassword(password, user.passwordHash))) return null;
+  // Chỉ báo khóa sau khi đúng mật khẩu: không lộ tài khoản nào tồn tại.
+  if (user.lockedAt) throw new UserError(LOCKED_MESSAGE);
   return { userId: user.id, token: await createSession(user.id) };
 }
+
+export const LOCKED_MESSAGE = "Tài khoản đã bị khóa. Liên hệ hỗ trợ KhuMình nếu bạn cho rằng đây là nhầm lẫn.";
 
 export async function createSession(userId: string): Promise<string> {
   const token = randomBytes(32).toString("base64url");
@@ -99,7 +103,7 @@ export async function userFromSession(token: string | undefined) {
     .select({ id: users.id, displayName: users.displayName, email: users.email })
     .from(sessions)
     .innerJoin(users, eq(users.id, sessions.userId))
-    .where(and(eq(sessions.tokenHash, hashSessionToken(token)), gt(sessions.expiresAt, new Date())));
+    .where(and(eq(sessions.tokenHash, hashSessionToken(token)), gt(sessions.expiresAt, new Date()), isNull(users.lockedAt)));
   return row ?? null;
 }
 

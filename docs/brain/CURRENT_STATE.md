@@ -39,7 +39,11 @@ Cập nhật: 2026-10-14, KM-HN (điều hướng 4 tab + trang Hôm nay, PR ch�
   property.delete/archive/restore. Nhân viên không làm được. src/server/property-lifecycle.ts.
 - KM-HN2 T6 (migration 0009_platform_admin): bảng platform_admins bật RLS không policy + REVOKE khỏi khuminh_app; hàm SECURITY DEFINER
   is_platform_admin/admin_stats/admin_reported_listings tự kiểm admin (assert_platform_admin). Trang /admin, cấp quyền bằng scripts/grant-admin.ts.
-  setup-db REVOKE lại platform_admins sau lệnh GRANT ALL TABLES. Chưa có thao tác ẩn tin/khóa tài khoản (T7).
+  setup-db REVOKE lại platform_admins sau lệnh GRANT ALL TABLES.
+- KM-HN2 T7 (migration 0010_admin_actions): users.locked_at; bảng admin_actions (RLS không policy, REVOKE khỏi app);
+  hàm admin_set_listing_hidden / admin_set_user_locked / admin_recent_actions tự kiểm admin, bắt buộc lý do khi ẩn/khóa,
+  không khóa được admin. Khóa = xóa mọi phiên + ẩn tin đang mở; signIn báo "đã bị khóa" chỉ sau khi đúng mật khẩu;
+  userFromSession lọc locked_at IS NULL. Trang /admin có nút ẩn/hiện tin, khóa/mở khóa người đăng, nhật ký admin.
 - CHƯA có: giới hạn đăng nhập sai (anh quyết chưa làm), gửi email/OTP, giám sát lỗi, xác nhận sao lưu.
 
 ## Môi trường

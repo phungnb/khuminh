@@ -37,3 +37,4 @@ Trang /dieu-khoan và /rieng-tu là BẢN NHÁP, cần anh duyệt nội dung.
 ## 7. Admin nền tảng
 - Cấp quyền: `DATABASE_URL=<chủ bảng> npx tsx scripts/grant-admin.ts <email>`; thu quyền thêm `--remove`. App không đọc/ghi được danh sách admin.
 - Trang /admin (lối vào ở Tôi): số tổng và tin bị báo cáo. Không có hóa đơn, tiền, liên hệ. Người không phải admin gặp trang 404.
+- Xử lý vi phạm ở /admin: ẩn tin (cần lý do), khóa người đăng (cần lý do; đăng xuất mọi thiết bị, ẩn tin đang mở). Mở khóa không tự hiện lại tin, phải bấm "Hiện lại tin" từng tin. Mọi thao tác ghi vào nhật ký admin.
