@@ -48,14 +48,28 @@ export default async function Page({
           </div>
           <div className="rounded-md bg-surface-2 p-3">
             <h3 className="text-sm font-semibold">App người thuê</h3>
-            {current.tenant.userId ? (
-              <p className="text-sm text-success">Đã có tài khoản: người thuê xem hóa đơn và quét QR trong app.</p>
-            ) : sp.moi ? (
+            {sp.moi ? (
               <>
                 <p className="mb-2 text-sm text-fg-muted">Gửi tin nhắn này cho người thuê. Link dùng được một lần, hết hạn sau 14 ngày.</p>
                 <CopyBox
-                  text={`Chào ${current.tenant.fullName}, mời bạn vào app KhuMình để xem hóa đơn phòng ${d.unit.block ? `${d.unit.block}-` : ""}${d.unit.code} hằng tháng và chuyển khoản bằng mã QR: ${await baseUrl()}/moi/${sp.moi}`}
+                  text={
+                    current.tenant.userId
+                      ? `Chào ${current.tenant.fullName}, đây là link đặt lại mật khẩu app KhuMình của bạn: ${await baseUrl()}/moi/${sp.moi}`
+                      : `Chào ${current.tenant.fullName}, mời bạn vào app KhuMình để xem hóa đơn phòng ${d.unit.block ? `${d.unit.block}-` : ""}${d.unit.code} hằng tháng và chuyển khoản bằng mã QR: ${await baseUrl()}/moi/${sp.moi}`
+                  }
                 />
+              </>
+            ) : current.tenant.userId ? (
+              <>
+                <p className="text-sm text-success">Đã có tài khoản: người thuê xem hóa đơn và quét QR trong app.</p>
+                {actor.role === "owner" ? (
+                  <form action={createTenantInviteAction} className="mt-2 flex flex-wrap items-center gap-2">
+                    {hidden}
+                    <input type="hidden" name="leaseId" value={current.lease.id} />
+                    <p className="flex-1 text-xs text-fg-muted">Người thuê quên mật khẩu? Tạo link để họ tự đặt mật khẩu mới.</p>
+                    <button className="btn-secondary">Link đặt lại mật khẩu</button>
+                  </form>
+                ) : null}
               </>
             ) : (
               <form action={createTenantInviteAction} className="mt-1 flex flex-wrap items-center gap-2">

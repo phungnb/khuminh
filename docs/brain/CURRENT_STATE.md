@@ -1,5 +1,5 @@
 # CURRENT_STATE — KhuMình
-Cập nhật: 2026-10-13, thêm chợ quanh đây (rút từ code; mục [ASSUMED] là suy luận từ mã, cần anh xác nhận).
+Cập nhật: 2026-10-14, thêm KM-SC (báo sự cố) và chặn migrate trên Preview; KM-VH (vá lỗ trước khi dùng thật); trước đó 2026-10-13 thêm chợ quanh đây (rút từ code; mục [ASSUMED] là suy luận từ mã, cần anh xác nhận).
 
 ## Định vị sản phẩm (CONFIRMED, anh xác nhận 2026-10-13)
 - KhuMình = chợ tiện ích quanh nhà (mua bán, cho tặng, dịch vụ trong bán kính tới 20 km).
@@ -14,14 +14,23 @@ Cập nhật: 2026-10-13, thêm chợ quanh đây (rút từ code; mục [ASSUME
 - Giao diện (PR #3, chờ duyệt): nền tối theo RaceHub, tab dưới 5 ô (Chợ, Nhà tôi, Đăng tin, Của tôi, Quản lý/Bảng tin),
   tìm từ khóa + lọc danh mục, thẻ lưới, chia sẻ, nút gọi. Component chung: src/components/{ui,category,listing-card}.tsx.
 - Module quản lý trọ: cơ sở, phòng, hợp đồng thuê, kỳ, hóa đơn, thanh toán.
-- DB Drizzle/Postgres, migration trong drizzle/ (0000_init … 0005_staff_push_rls, 0006_market, 0007_market_rls).
+- DB Drizzle/Postgres, migration trong drizzle/ (0000_init … 0005_staff_push_rls, 0006_market, 0007_market_rls, 0008_maintenance).
 - Mô hình hai role: khuminh_app (chịu RLS) + khuminh_owner (chủ bảng, chỉ migrate).
 - Auth: chủ nhà đăng ký (email/mật khẩu); người thuê đăng nhập bằng SĐT qua link mời.
 - Domain tách lớp: src/domain (billing, payments, money), src/server, src/db.
 - Test: unit (billing, payments, money, geo) + DB thật (flow, tenant, community, market).
+- KM-VH (PR chờ duyệt): người thuê quên mật khẩu → chủ trọ cấp link đặt lại (dùng bảng tenant_invites, không migration);
+  nhận lời mời phải đúng SĐT chủ trọ đã ghi; mật khẩu mới ≥ 8 ký tự; trang /dieu-khoan, /rieng-tu (bản nháp);
+  error/not-found/loading toàn cục; scripts/reset-password.ts, scripts/metrics.ts. Vận hành: docs/brain/VAN_HANH.md.
+- KM-SC (PR chờ duyệt, migration 0008_maintenance): người thuê báo sự cố ở /app/su-co (thẻ "Báo sự cố" trên Nhà tôi);
+  chủ trọ/nhân viên được giao xử lý ở tab "Sự cố" của cơ sở (mới → đang xử lý → xong / từ chối kèm lý do), tổng quan cơ sở hiện số sự cố mở;
+  thông báo đẩy hai chiều. Bảng maintenance_requests có RLS org_isolation; người thuê đi qua withOrg + lọc lease của mình. Không có ảnh.
+- CHƯA có: giới hạn đăng nhập sai (anh quyết chưa làm), gửi email/OTP, giám sát lỗi, xác nhận sao lưu.
 
 ## Môi trường
 - Triển khai: Vercel (vercel-build chạy setup-db trước next build). [ASSUMED]
+- setup-db THOÁT SỚM khi VERCEL_ENV=preview: bản Preview không migrate DB (chưa xác nhận Preview có dùng chung DB Production không).
+  Hệ quả: trang dùng bảng mới (vd. Sự cố) lỗi trên Preview tới khi merge và Production migrate. [ASSUMED: VERCEL_ENV có ở bước build]
 - Biến môi trường: DATABASE_URL (owner), DATABASE_URL_APP (app), APP_DB_PASSWORD, APP_URL.
 
 ## Bị chặn / cần làm (sau khi lên chuẩn phung-os)

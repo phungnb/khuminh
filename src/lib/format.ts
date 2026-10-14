@@ -26,3 +26,8 @@ export function parseReading(v: FormDataEntryValue | null): number | null {
   if (!/^\d+(\.\d{1,2})?$/.test(s)) return Number.NaN;
   return Number(s);
 }
+
+/** Ngày giờ theo giờ Việt Nam, ví dụ 14/10 08:30. */
+export function dateTimeVn(d: Date): string {
+  return d.toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+}

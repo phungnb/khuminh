@@ -41,7 +41,7 @@ async function tenantIn(owner: Actor, propertyId: string, code: string, name: st
   await importUnits(owner, propertyId, [{ code }], []);
   const [u] = await withOrg(owner, (tx) => tx.select().from(s.units).where(eq(s.units.code, code)));
   const lease = await createLease(owner, { unitId: u!.id, tenant: { fullName: name }, startDate: "2026-01-01", deposit: 0, occupants: 1, rent: 1_000_000 });
-  return acceptTenantInvite((await createTenantInvite(owner, lease)).token, { phone: phone(), password: "abcdef" });
+  return acceptTenantInvite((await createTenantInvite(owner, lease)).token, { phone: phone(), password: "abcdef12" });
 }
 
 describe("chợ quanh đây", () => {

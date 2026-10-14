@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Building2, Gift, ShieldCheck, ShoppingBag, Wrench } from "lucide-react";
+import { LegalFooter } from "@/components/legal-note";
 import { Logo } from "@/components/ui";
+import { supportContact } from "@/lib/support";
 import { currentUser } from "@/lib/session";
 
 const FEATURES = [
@@ -49,6 +51,7 @@ export default async function Home() {
         </div>
       </div>
       <p className="mt-6 text-center text-sm text-fg-subtle">Đang thuê trọ? Xin chủ nhà gửi link mời để vào KhuMình.</p>
+      <LegalFooter support={supportContact()} />
     </main>
   );
 }

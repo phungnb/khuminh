@@ -57,6 +57,13 @@
       "when": 1791927098317,
       "tag": "0007_market_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1791944074142,
+      "tag": "0008_maintenance",
+      "breakpoints": true
     }
   ]
 }

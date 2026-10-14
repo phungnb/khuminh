@@ -14,5 +14,5 @@ export async function acceptInviteAction(f: FormData) {
     });
     await setSession(await createSession(userId));
     return "/app";
-  }, "Đã tạo tài khoản. Thêm app vào màn hình chính để mở nhanh.");
+  }, "Xong. Thêm app vào màn hình chính để mở nhanh.");
 }

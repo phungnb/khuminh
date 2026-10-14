@@ -6,30 +6,40 @@
 
 import { randomBytes } from "node:crypto";
 import { and, desc, eq, inArray, isNull, ne, sql } from "drizzle-orm";
-import { getDb, withOrg, withUser } from "@/db/client";
+import { getDb, withOrg, withUser, type Tx } from "@/db/client";
 import {
   billingPeriods,
   invoices,
   leases,
+  memberships,
   paymentAllocations,
   properties,
+  sessions,
   tenantInvites,
   tenants,
   units,
   users,
 } from "@/db/schema";
 import { paymentState, type PaymentState } from "@/domain/payments";
-import { audit, UserError, type Actor } from "./audit";
-import { hashPassword, normalizePhone, verifyPassword } from "./auth";
+import { audit, requireOwner, UserError, type Actor } from "./audit";
+import { hashPassword, MIN_PASSWORD_LENGTH, normalizePhone, verifyPassword } from "./auth";
 import { loadInvoiceView, hashToken, type PublicInvoice } from "./share";
 import { today } from "./queries";
 
 export const INVITE_TTL_DAYS = 14;
 
-/** Tạo link mời cho người thuê của hợp đồng; link cũ chưa dùng vẫn còn hiệu lực tới khi hết hạn. */
-export async function createTenantInvite(actor: Actor, leaseId: string): Promise<{ token: string; expiresAt: Date }> {
+/**
+ * Tạo link mời cho người thuê của hợp đồng; link cũ chưa dùng vẫn còn hiệu lực tới khi hết hạn.
+ * Người thuê đã có tài khoản thì link này là link ĐẶT LẠI MẬT KHẨU (quên mật khẩu): chỉ chủ trọ
+ * tạo được, và chỉ khi tài khoản không dùng ở khu của chủ trọ khác (xem assertResettable).
+ */
+export async function createTenantInvite(
+  actor: Actor,
+  leaseId: string,
+): Promise<{ token: string; expiresAt: Date; reset: boolean }> {
   const token = randomBytes(32).toString("base64url");
   const expiresAt = new Date(Date.now() + INVITE_TTL_DAYS * 86_400_000);
+  let reset = false;
   await withOrg(actor, async (tx) => {
     const [row] = await tx
       .select({ tenantId: leases.tenantId, status: leases.status, movedOutOn: leases.movedOutOn, userId: tenants.userId })
@@ -38,7 +48,11 @@ export async function createTenantInvite(actor: Actor, leaseId: string): Promise
       .where(eq(leases.id, leaseId));
     if (!row) throw new UserError("Không tìm thấy hợp đồng");
     if (row.status !== "active" || row.movedOutOn) throw new UserError("Chỉ mời được người thuê đang ở");
-    if (row.userId) throw new UserError("Người thuê này đã có tài khoản app");
+    if (row.userId) {
+      requireOwner(actor);
+      await assertResettable(row.userId, actor.orgId);
+      reset = true;
+    }
     await tx.insert(tenantInvites).values({
       orgId: actor.orgId,
       tenantId: row.tenantId,
@@ -46,9 +60,25 @@ export async function createTenantInvite(actor: Actor, leaseId: string): Promise
       expiresAt,
       createdBy: actor.userId,
     });
-    await audit(tx, actor, "tenant.invite", "tenant", row.tenantId, null, { expiresAt });
+    await audit(tx, actor, reset ? "tenant.reset_link" : "tenant.invite", "tenant", row.tenantId, null, { expiresAt });
   });
-  return { token, expiresAt };
+  return { token, expiresAt, reset };
+}
+
+/**
+ * Chủ trọ chỉ được đặt lại mật khẩu cho tài khoản chỉ thuê ở khu của mình. Nếu tài khoản còn gắn
+ * khu của chủ trọ khác, hoặc là chủ/nhân viên, đặt lại từ đây sẽ cho chủ trọ này chiếm quyền xem
+ * dữ liệu ở nơi khác.
+ */
+async function assertResettable(userId: string, orgId: string): Promise<void> {
+  const links = await tenantLinks(userId);
+  if (links.some((l) => l.orgId !== orgId)) {
+    throw new UserError("Tài khoản này đang dùng ở khu trọ khác nên không đặt lại mật khẩu từ đây được. Liên hệ hỗ trợ KhuMình.");
+  }
+  const managed = await withUser(userId, (tx) =>
+    tx.select({ id: memberships.id }).from(memberships).where(eq(memberships.userId, userId)).limit(1),
+  );
+  if (managed.length) throw new UserError("Tài khoản này là chủ trọ hoặc nhân viên, không đặt lại mật khẩu từ đây được.");
 }
 
 export interface InviteInfo {
@@ -59,6 +89,8 @@ export interface InviteInfo {
   phone: string | null;
   propertyName: string;
   unitCode: string;
+  /** Có giá trị khi người thuê đã có tài khoản: link là link đặt lại mật khẩu. */
+  resetUserId: string | null;
 }
 
 async function findInvite(token: string): Promise<InviteInfo | null> {
@@ -70,7 +102,7 @@ async function findInvite(token: string): Promise<InviteInfo | null> {
   if (!hit) return null;
   return withOrg({ orgId: hit.org_id, userId: null }, async (tx) => {
     const [row] = await tx
-      .select({ fullName: tenants.fullName, phone: tenants.phone, propertyName: properties.name, unit: units })
+      .select({ fullName: tenants.fullName, phone: tenants.phone, userId: tenants.userId, propertyName: properties.name, unit: units })
       .from(tenants)
       .innerJoin(leases, eq(leases.tenantId, tenants.id))
       .innerJoin(units, eq(units.id, leases.unitId))
@@ -87,6 +119,7 @@ async function findInvite(token: string): Promise<InviteInfo | null> {
       phone: row.phone,
       propertyName: row.propertyName,
       unitCode: row.unit.block ? `${row.unit.block}-${row.unit.code}` : row.unit.code,
+      resetUserId: row.userId,
     };
   });
 }
@@ -95,7 +128,9 @@ export { findInvite as resolveTenantInvite };
 
 /**
  * Nhận lời mời. Số điện thoại chưa có tài khoản thì tạo mới; đã có thì phải đúng mật khẩu
- * (một người thuê nhiều nơi dùng chung một tài khoản). Trả về userId để tạo phiên.
+ * (một người thuê nhiều nơi dùng chung một tài khoản). Nếu chủ trọ đã ghi SĐT người thuê thì
+ * SĐT nhập phải trùng, để link bị chuyển tiếp không gắn nhầm người. Link của người đã có tài
+ * khoản là link đặt lại mật khẩu (resetTenantPassword). Trả về userId để tạo phiên.
  */
 export async function acceptTenantInvite(
   token: string,
@@ -105,7 +140,12 @@ export async function acceptTenantInvite(
   if (!invite) throw new UserError("Link mời đã hết hạn hoặc đã được dùng. Hãy xin chủ nhà link mới.");
   const phone = normalizePhone(input.phone);
   if (!phone) throw new UserError("Số điện thoại không hợp lệ");
-  if (input.password.length < 6) throw new UserError("Mật khẩu cần ít nhất 6 ký tự");
+  if (invite.resetUserId) return resetTenantPassword(invite, invite.resetUserId, phone, input.password);
+
+  const expectedPhone = invite.phone ? normalizePhone(invite.phone) : null;
+  if (expectedPhone && expectedPhone !== phone) {
+    throw new UserError("Số điện thoại không khớp với số chủ nhà đã ghi. Hãy hỏi lại chủ nhà.");
+  }
 
   const db = getDb();
   const [existing] = await db.select().from(users).where(eq(users.phone, phone));
@@ -116,6 +156,7 @@ export async function acceptTenantInvite(
     }
     userId = existing.id;
   } else {
+    if (input.password.length < MIN_PASSWORD_LENGTH) throw new UserError(`Mật khẩu cần ít nhất ${MIN_PASSWORD_LENGTH} ký tự`);
     const [u] = await db
       .insert(users)
       .values({ phone, displayName: input.displayName?.trim() || invite.fullName, passwordHash: await hashPassword(input.password) })
@@ -124,13 +165,7 @@ export async function acceptTenantInvite(
   }
 
   await withOrg({ orgId: invite.orgId, userId }, async (tx) => {
-    // Khóa lời mời để hai lần bấm cùng lúc không gắn hai tài khoản.
-    const used = await tx
-      .update(tenantInvites)
-      .set({ usedAt: new Date() })
-      .where(and(eq(tenantInvites.id, invite.inviteId), isNull(tenantInvites.usedAt)))
-      .returning({ id: tenantInvites.id });
-    if (used.length === 0) throw new UserError("Link mời đã được dùng");
+    await useInvite(tx, invite);
     const linked = await tx
       .update(tenants)
       .set({ userId, phone: sql`coalesce(${tenants.phone}, ${phone})` })
@@ -138,6 +173,41 @@ export async function acceptTenantInvite(
       .returning({ id: tenants.id });
     if (linked.length === 0) throw new UserError("Hồ sơ người thuê này đã gắn với tài khoản khác");
     await audit(tx, { orgId: invite.orgId, userId, role: "staff" }, "tenant.link", "tenant", invite.tenantId, null, { userId });
+  });
+  return userId;
+}
+
+/**
+ * Khóa lời mời để hai lần bấm cùng lúc không dùng được hai lần, và vô hiệu mọi link khác còn
+ * mở của cùng người thuê: link mời cũ chưa dùng sẽ thành link đặt lại mật khẩu sau khi đã có
+ * tài khoản, nên không được để sót.
+ */
+async function useInvite(tx: Tx, invite: InviteInfo): Promise<void> {
+  const now = new Date();
+  const used = await tx
+    .update(tenantInvites)
+    .set({ usedAt: now })
+    .where(and(eq(tenantInvites.id, invite.inviteId), isNull(tenantInvites.usedAt)))
+    .returning({ id: tenantInvites.id });
+  if (used.length === 0) throw new UserError("Link mời đã được dùng");
+  await tx
+    .update(tenantInvites)
+    .set({ usedAt: now })
+    .where(and(eq(tenantInvites.tenantId, invite.tenantId), isNull(tenantInvites.usedAt)));
+}
+
+/** Đặt lại mật khẩu qua link chủ trọ cấp. SĐT phải trùng tài khoản; mọi phiên cũ bị thu hồi. */
+async function resetTenantPassword(invite: InviteInfo, userId: string, phone: string, password: string): Promise<string> {
+  const [user] = await getDb().select({ id: users.id, phone: users.phone }).from(users).where(eq(users.id, userId));
+  if (!user?.phone || user.phone !== phone) throw new UserError("Số điện thoại không khớp với tài khoản của bạn");
+  if (password.length < MIN_PASSWORD_LENGTH) throw new UserError(`Mật khẩu cần ít nhất ${MIN_PASSWORD_LENGTH} ký tự`);
+  await assertResettable(userId, invite.orgId);
+  const passwordHash = await hashPassword(password);
+  await withOrg({ orgId: invite.orgId, userId }, async (tx) => {
+    await useInvite(tx, invite);
+    await tx.update(users).set({ passwordHash }).where(eq(users.id, userId));
+    await tx.delete(sessions).where(eq(sessions.userId, userId));
+    await audit(tx, { orgId: invite.orgId, userId, role: "staff" }, "tenant.password_reset", "tenant", invite.tenantId, null, null);
   });
   return userId;
 }
@@ -233,7 +303,7 @@ export async function tenantInvoice(userId: string, invoiceId: string): Promise<
   return null;
 }
 
-function groupLinks(links: Array<{ orgId: string; tenantId: string }>): Map<string, string[]> {
+export function groupLinks(links: Array<{ orgId: string; tenantId: string }>): Map<string, string[]> {
   const m = new Map<string, string[]>();
   for (const l of links) m.set(l.orgId, [...(m.get(l.orgId) ?? []), l.tenantId]);
   return m;

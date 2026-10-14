@@ -10,6 +10,8 @@ import { UserError, type Actor } from "./audit";
 
 const scrypt = promisify(scryptCb) as (pw: string, salt: Buffer, len: number) => Promise<Buffer>;
 export const SESSION_TTL_DAYS = 30;
+/** Mật khẩu mới (tạo hoặc đặt lại). Tài khoản cũ đặt trước quy định này vẫn đăng nhập được. */
+export const MIN_PASSWORD_LENGTH = 8;
 
 export async function hashPassword(password: string): Promise<string> {
   const salt = randomBytes(16);
@@ -50,7 +52,7 @@ export async function signUpOwner(input: {
 }): Promise<{ userId: string; orgId: string }> {
   const email = normalizeEmail(input.email);
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) throw new UserError("Email không hợp lệ");
-  if (input.password.length < 8) throw new UserError("Mật khẩu cần ít nhất 8 ký tự");
+  if (input.password.length < MIN_PASSWORD_LENGTH) throw new UserError(`Mật khẩu cần ít nhất ${MIN_PASSWORD_LENGTH} ký tự`);
   if (!input.displayName.trim()) throw new UserError("Cần nhập tên");
   const db = getDb();
   const [exists] = await db.select({ id: users.id }).from(users).where(eq(users.email, email));

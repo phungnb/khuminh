@@ -54,8 +54,8 @@ describe("cộng đồng khu trọ", () => {
     const unit = (c: string) => us.find((u) => u.code === c)!.id;
     lease101 = await createLease(a, { unitId: unit("101"), tenant: { fullName: "Bình" }, startDate: "2026-01-01", deposit: 0, occupants: 1, rent: 3_000_000 });
     lease102 = await createLease(a, { unitId: unit("102"), tenant: { fullName: "Chi" }, startDate: "2026-01-01", deposit: 0, occupants: 1, rent: 2_000_000 });
-    tenant101 = await acceptTenantInvite((await createTenantInvite(a, lease101)).token, { phone: phone(), password: "abcdef" });
-    tenant102 = await acceptTenantInvite((await createTenantInvite(a, lease102)).token, { phone: phone(), password: "abcdef" });
+    tenant101 = await acceptTenantInvite((await createTenantInvite(a, lease101)).token, { phone: phone(), password: "abcdef12" });
+    tenant102 = await acceptTenantInvite((await createTenantInvite(a, lease102)).token, { phone: phone(), password: "abcdef12" });
     periodId = await openPeriod(a, p1, "2026-10-01", "2026-10-31");
   });
 

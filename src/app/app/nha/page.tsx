@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { House, Megaphone } from "lucide-react";
+import { House, Megaphone, Wrench } from "lucide-react";
 import { Badge, EmptyState, Flash } from "@/components/ui";
 import { PAYMENT_STATE_LABEL } from "@/domain/payments";
 import { dmy, vnd } from "@/lib/format";
@@ -32,6 +32,13 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ l
         <span className="min-w-0">
           <span className="block font-semibold">Bảng tin khu trọ</span>
           <span className="block text-sm text-fg-subtle">Thông báo của chủ nhà, tin trong khu</span>
+        </span>
+      </Link>
+      <Link href="/app/su-co" className="card mb-4 flex items-center gap-3 hover:border-fg-subtle">
+        <span className="grid size-10 place-items-center rounded-full bg-surface-2 text-brand"><Wrench className="size-5" aria-hidden /></span>
+        <span className="min-w-0">
+          <span className="block font-semibold">Báo sự cố</span>
+          <span className="block text-sm text-fg-subtle">Hỏng điện nước, đồ đạc: gửi chủ nhà, theo dõi xử lý</span>
         </span>
       </Link>
       {homes.map((h) => {
