@@ -68,3 +68,6 @@ export function formatKm(km: number): string {
   if (km < 1) return `${Math.max(100, Math.round(km * 10) * 100)} m`;
   return `${km < 10 ? km.toFixed(1).replace(".", ",") : Math.round(km)} km`;
 }
+
+/** Cookie nhớ bán kính người dùng chọn ở Quanh đây; Hôm nay dùng chung. */
+export const RADIUS_COOKIE = "km_r";

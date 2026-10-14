@@ -2,26 +2,29 @@ import Link from "next/link";
 import { Logo } from "@/components/ui";
 import { wallBackground } from "@/lib/club-themes";
 import { requireActor } from "@/lib/session";
+import { Flash } from "@/components/ui";
+import { listArchivedProperties } from "@/server/property-lifecycle";
 import { listProperties } from "@/server/queries";
+import { restorePropertyAction } from "../co-so/actions";
 import { logoutAction } from "../auth-actions";
 
 export const dynamic = "force-dynamic";
 
 // Module quản lý khu: danh sách cơ sở như các CLB; vào từng cơ sở dùng các trang /co-so/*.
-export default async function Page() {
+export default async function Page({ searchParams }: { searchParams: Promise<{ loi?: string; ok?: string }> }) {
   const actor = await requireActor();
-  const props = await listProperties(actor);
+  const [props, archived] = await Promise.all([listProperties(actor), listArchivedProperties(actor)]);
   return (
     <div>
       <header className="sticky top-0 z-40 border-b border-border bg-bg/85 backdrop-blur-md">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-2 px-4 py-3">
           <div className="flex items-center gap-2">
-            <Link href="/app" aria-label="KhuMình — về chợ"><Logo /></Link>
+            <Link href="/app" aria-label="KhuMình — Hôm nay"><Logo /></Link>
             <span className="text-fg-subtle">/</span>
             <span className="font-semibold">Quản lý khu</span>
           </div>
           <div className="flex items-center gap-3">
-            <Link href="/app" className="text-sm font-medium text-brand-ink">Về chợ</Link>
+            <Link href="/app" className="text-sm font-medium text-brand-ink">Về app</Link>
             <form action={logoutAction}>
               <button className="text-sm text-fg-subtle hover:text-fg">Đăng xuất</button>
             </form>
@@ -33,6 +36,7 @@ export default async function Page() {
           <h1 className="text-xl font-bold">Cơ sở của bạn</h1>
           {actor.role === "owner" ? <Link href="/co-so/moi" className="btn">Thêm cơ sở</Link> : null}
         </div>
+        <Flash params={await searchParams} />
         {props.length === 0 ? (
           <div className="card text-center text-sm text-fg-muted">
             Chưa có cơ sở nào. Tạo cơ sở đầu tiên để quản lý phòng, hóa đơn và mở chợ cho cư dân.
@@ -53,6 +57,25 @@ export default async function Page() {
             ))}
           </div>
         )}
+        {archived.length > 0 ? (
+          <section className="mt-8">
+            <h2 className="mb-2 text-sm font-semibold text-fg-subtle">Khu đã lưu trữ</h2>
+            <ul className="space-y-2">
+              {archived.map((p) => (
+                <li key={p.id} className="card flex items-center justify-between gap-3">
+                  <Link href={`/co-so/${p.id}`} className="min-w-0">
+                    <span className="block truncate font-semibold">{p.name}</span>
+                    {p.address ? <span className="block truncate text-sm text-fg-subtle">{p.address}</span> : null}
+                  </Link>
+                  <form action={restorePropertyAction}>
+                    <input type="hidden" name="propertyId" value={p.id} />
+                    <button className="btn-secondary">Khôi phục</button>
+                  </form>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
       </main>
     </div>
   );

@@ -33,3 +33,8 @@ Trang /dieu-khoan và /rieng-tu là BẢN NHÁP, cần anh duyệt nội dung.
 ## 6. Sự cố và bản Preview
 - Người thuê báo sự cố trong app; chủ trọ và nhân viên được giao cơ sở nhận thông báo đẩy, xử lý ở tab "Sự cố". Sự cố đã xong/từ chối không mở lại được: người thuê gửi yêu cầu mới.
 - Bản Preview trên Vercel KHÔNG chạy migration. Trang dùng bảng mới sẽ lỗi trên Preview tới khi merge; muốn thử trước thì dùng DB riêng cho Preview và gỡ chặn trong scripts/setup-db.ts.
+
+## 7. Admin nền tảng
+- Cấp quyền: `DATABASE_URL=<chủ bảng> npx tsx scripts/grant-admin.ts <email>`; thu quyền thêm `--remove`. App không đọc/ghi được danh sách admin.
+- Trang /admin (lối vào ở Tôi): số tổng và tin bị báo cáo. Không có hóa đơn, tiền, liên hệ. Người không phải admin gặp trang 404.
+- Xử lý vi phạm ở /admin: ẩn tin (cần lý do), khóa người đăng (cần lý do; đăng xuất mọi thiết bị, ẩn tin đang mở). Mở khóa không tự hiện lại tin, phải bấm "Hiện lại tin" từng tin. Mọi thao tác ghi vào nhật ký admin.

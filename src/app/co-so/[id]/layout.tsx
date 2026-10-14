@@ -25,7 +25,7 @@ export default async function Layout({ children, params }: { children: React.Rea
       <header className="sticky top-0 z-40 border-b border-border bg-bg/85 backdrop-blur-md">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-2 px-4 py-3">
           <div className="flex items-center gap-2">
-            <Link href="/app" aria-label="KhuMình — về chợ"><Logo /></Link>
+            <Link href="/app" aria-label="KhuMình — Hôm nay"><Logo /></Link>
             <span className="text-fg-subtle">/</span>
             <Link href="/quan-ly" className="text-sm text-fg-muted hover:text-brand-ink">Quản lý khu</Link>
             <span className="text-fg-subtle">/</span>
@@ -33,7 +33,7 @@ export default async function Layout({ children, params }: { children: React.Rea
             {all.length > 1 ? <span className="text-xs text-fg-subtle">({all.length} cơ sở)</span> : null}
           </div>
           <div className="flex items-center gap-3">
-            <Link href="/app" className="text-sm font-medium text-brand-ink">Về chợ</Link>
+            <Link href="/app" className="text-sm font-medium text-brand-ink">Về app</Link>
             <form action={logoutAction}>
               <button className="text-sm text-fg-subtle hover:text-fg">Đăng xuất</button>
             </form>
@@ -47,7 +47,15 @@ export default async function Layout({ children, params }: { children: React.Rea
           ))}
         </nav>
       </header>
-      <main className="mx-auto max-w-5xl px-4 py-6">{children}</main>
+      <main className="mx-auto max-w-5xl px-4 py-6">
+        {property.archivedAt ? (
+          <p className="card mb-4 border-warning/40 text-sm">
+            Khu này đang được lưu trữ, cư dân không còn thấy trong chợ và Hôm nay.{" "}
+            <Link href={`/co-so/${id}/bieu-phi#khu`} className="font-semibold text-brand-ink">Khôi phục</Link>
+          </p>
+        ) : null}
+        {children}
+      </main>
     </div>
   );
 }

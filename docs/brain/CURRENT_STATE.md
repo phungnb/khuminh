@@ -1,5 +1,5 @@
 # CURRENT_STATE — KhuMình
-Cập nhật: 2026-10-14, thêm KM-SC (báo sự cố) và chặn migrate trên Preview; KM-VH (vá lỗ trước khi dùng thật); trước đó 2026-10-13 thêm chợ quanh đây (rút từ code; mục [ASSUMED] là suy luận từ mã, cần anh xác nhận).
+Cập nhật: 2026-10-14, KM-HN (điều hướng 4 tab + trang Hôm nay, PR chờ duyệt); thêm KM-SC (báo sự cố) và chặn migrate trên Preview; KM-VH (vá lỗ trước khi dùng thật); trước đó 2026-10-13 thêm chợ quanh đây (rút từ code; mục [ASSUMED] là suy luận từ mã, cần anh xác nhận).
 
 ## Định vị sản phẩm (CONFIRMED, anh xác nhận 2026-10-13)
 - KhuMình = chợ tiện ích quanh nhà (mua bán, cho tặng, dịch vụ trong bán kính tới 20 km).
@@ -25,6 +25,25 @@ Cập nhật: 2026-10-14, thêm KM-SC (báo sự cố) và chặn migrate trên 
 - KM-SC (PR chờ duyệt, migration 0008_maintenance): người thuê báo sự cố ở /app/su-co (thẻ "Báo sự cố" trên Nhà tôi);
   chủ trọ/nhân viên được giao xử lý ở tab "Sự cố" của cơ sở (mới → đang xử lý → xong / từ chối kèm lý do), tổng quan cơ sở hiện số sự cố mở;
   thông báo đẩy hai chiều. Bảng maintenance_requests có RLS org_isolation; người thuê đi qua withOrg + lọc lease của mình. Không có ảnh.
+- KM-HN (PR chờ duyệt, chỉ giao diện, không migration): tab dưới Hôm nay / Quanh đây / [Đăng tin] / Tiện ích / Tôi.
+  /app = "Hôm nay có gì?" dựng từ dữ liệu đã có (hóa đơn còn nợ, sự cố mở + vừa xong 3 ngày, thông báo chủ trọ ≤ 14 ngày,
+  sự cố chưa xong của cơ sở mình quản lý, 4 tin chợ gần 3 km); không có nội dung mẫu. Chợ chuyển sang /app/quanh-day
+  (link cũ /app?o=… tự chuyển). "Nhà tôi" thành "Nhà và nơi ở" (/app/nha) trong Tôi (/app/toi). Logic chọn ở src/server/today.ts.
+  Định vị CHƯA đổi (vẫn theo PRD V1.0); phản biện: khuminh/KM-HN_phan-bien-v1.0.md trên thư mục project.
+- KM-HN2 gói 1 (PR chồng lên PR #6, không migration): Hôm nay có "Mới hôm nay quanh bạn" (tin 24 giờ);
+  bán kính chọn ở Quanh đây được nhớ bằng cookie km_r (middleware) và Hôm nay dùng chung; Quanh đây lọc theo nhu cầu
+  (Mua bán, Cần mua, Cho tặng, Sửa chữa, Dọn dẹp/giặt ủi, Dịch vụ khác); Tiện ích có 4 nhóm Xem tin/Đăng tin điền sẵn;
+  Tôi có mục Quản lý khu; trang /app/nguoi/[id] "tin của người này" (chỉ trong 20 km quanh khu người xem). Plan: khuminh/KM-HN2_plan-v1.0.md.
+- KM-HN2 T5 (không migration, dùng cột archived_at có sẵn): chủ trọ xóa hẳn khu NHÁP (chưa từng có hợp đồng/kỳ; gõ lại tên để xác nhận),
+  hoặc lưu trữ khu đã dùng (không còn hợp đồng đang thuê) và khôi phục; ở Cài đặt khu (#khu) và /quan-ly "Khu đã lưu trữ". Có audit
+  property.delete/archive/restore. Nhân viên không làm được. src/server/property-lifecycle.ts.
+- KM-HN2 T6 (migration 0009_platform_admin): bảng platform_admins bật RLS không policy + REVOKE khỏi khuminh_app; hàm SECURITY DEFINER
+  is_platform_admin/admin_stats/admin_reported_listings tự kiểm admin (assert_platform_admin). Trang /admin, cấp quyền bằng scripts/grant-admin.ts.
+  setup-db REVOKE lại platform_admins sau lệnh GRANT ALL TABLES.
+- KM-HN2 T7 (migration 0010_admin_actions): users.locked_at; bảng admin_actions (RLS không policy, REVOKE khỏi app);
+  hàm admin_set_listing_hidden / admin_set_user_locked / admin_recent_actions tự kiểm admin, bắt buộc lý do khi ẩn/khóa,
+  không khóa được admin. Khóa = xóa mọi phiên + ẩn tin đang mở; signIn báo "đã bị khóa" chỉ sau khi đúng mật khẩu;
+  userFromSession lọc locked_at IS NULL. Trang /admin có nút ẩn/hiện tin, khóa/mở khóa người đăng, nhật ký admin.
 - CHƯA có: giới hạn đăng nhập sai (anh quyết chưa làm), gửi email/OTP, giám sát lỗi, xác nhận sao lưu.
 
 ## Môi trường

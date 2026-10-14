@@ -35,7 +35,7 @@ export default async function Page({
       <div className="relative -mx-4 -mt-4">
         <CategoryTile category={l.category} className="aspect-[16/10] w-full" iconClass="size-16" />
         <Link
-          href={sp.o ? `/app?o=${encodeURIComponent(sp.o)}` : "/app"}
+          href={sp.o ? `/app/quanh-day?o=${encodeURIComponent(sp.o)}` : "/app/quanh-day"}
           aria-label="Về chợ"
           className="absolute top-3 left-3 grid size-11 place-items-center rounded-full bg-black/40 text-white backdrop-blur"
         >
@@ -67,6 +67,9 @@ export default async function Page({
             <p className="truncate font-semibold">{l.authorName}</p>
             <p className="text-xs text-fg-subtle">Người đăng · cư dân gần {l.areaLabel}</p>
           </div>
+          <Link href={`/app/nguoi/${l.authorId}`} className="ml-auto shrink-0 text-sm font-medium text-brand-ink">
+            {l.mine ? "Trang của tôi" : "Tin khác"}
+          </Link>
         </div>
         {l.status === "closed" ? <p className="mt-3 text-sm font-semibold text-fg-muted">Tin đã đóng.</p> : null}
         {l.hidden ? <p className="mt-3 text-sm font-semibold text-danger">Tin bị ẩn do nhiều người báo cáo.</p> : null}

@@ -149,6 +149,8 @@ export interface ListingRow {
   hidden: boolean;
   createdAt: Date;
   authorName: string;
+  /** Để mở trang "tin của người này". */
+  authorId: string;
   mine: boolean;
   distanceKm: number | null;
   interestCount: number;
@@ -203,6 +205,7 @@ function toRow(r: RawListing, userId: string, center: LatLng | null): ListingRow
     hidden: r.hiddenAt !== null,
     createdAt: r.createdAt,
     authorName: r.authorName,
+    authorId: r.authorUserId,
     mine: r.authorUserId === userId,
     distanceKm: center ? distanceKm(center, { lat: r.lat, lng: r.lng }) : null,
     interestCount: Number(r.interestCount),
@@ -215,6 +218,10 @@ export interface ListingFilter {
   category?: string;
   /** Tìm trong tiêu đề và mô tả. */
   q?: string;
+  /** Chỉ tin đăng từ thời điểm này (vd. "mới hôm nay"). */
+  since?: Date;
+  /** Chỉ tin của một người đăng. */
+  authorId?: string;
 }
 
 export async function searchListings(
@@ -224,7 +231,7 @@ export async function searchListings(
   filter: ListingFilter = {},
   limit = 100,
 ): Promise<ListingRow[]> {
-  const { kind, category } = filter;
+  const { kind, category, since, authorId } = filter;
   const q = filter.q?.trim().slice(0, 80);
   const like = q ? `%${q.replace(/[\\%_]/g, (c) => `\\${c}`)}%` : null;
   const b = boundingBox(center, radiusKm);
@@ -244,6 +251,8 @@ export async function searchListings(
           kind ? eq(listings.kind, kind) : undefined,
           category ? eq(listings.category, category) : undefined,
           like ? or(ilike(listings.title, like), ilike(listings.body, like)) : undefined,
+          since ? gte(listings.createdAt, since) : undefined,
+          authorId ? eq(listings.authorUserId, authorId) : undefined,
         ),
       )
       .orderBy(desc(listings.createdAt))

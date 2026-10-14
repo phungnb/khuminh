@@ -9,6 +9,7 @@ import { UserError } from "@/server/audit";
 import { adjustInvoice, generateDrafts, issueInvoices, voidInvoice } from "@/server/billing";
 import { setPropertyLocation } from "@/server/market";
 import { recordPayment, voidPayment } from "@/server/payments";
+import { archiveProperty, deleteDraftProperty, restoreProperty } from "@/server/property-lifecycle";
 import {
   changeRent,
   createLease,
@@ -307,4 +308,31 @@ export async function updateMaintenanceAction(f: FormData) {
     const { updateMaintenanceStatus } = await import("@/server/maintenance");
     await updateMaintenanceStatus(actor, str(f, "requestId"), str(f, "status") as "in_progress" | "done" | "rejected", str(f, "note"));
   }, "Đã cập nhật, người thuê sẽ nhận thông báo");
+}
+
+export async function deletePropertyAction(f: FormData) {
+  const actor = await requireActor();
+  const id = str(f, "propertyId");
+  await runAction(`/co-so/${id}/bieu-phi`, async () => {
+    await deleteDraftProperty(actor, id, str(f, "confirmName"));
+    return "/quan-ly";
+  }, "Đã xóa khu");
+}
+
+export async function archivePropertyAction(f: FormData) {
+  const actor = await requireActor();
+  const id = str(f, "propertyId");
+  await runAction(`/co-so/${id}/bieu-phi`, async () => {
+    await archiveProperty(actor, id);
+    return "/quan-ly";
+  }, "Đã lưu trữ khu. Khôi phục ở mục Khu đã lưu trữ.");
+}
+
+export async function restorePropertyAction(f: FormData) {
+  const actor = await requireActor();
+  const id = str(f, "propertyId");
+  await runAction("/quan-ly", async () => {
+    await restoreProperty(actor, id);
+    return `/co-so/${id}`;
+  }, "Đã khôi phục khu");
 }

@@ -17,17 +17,8 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ t
   const waiting = mine.reduce((n, l) => n + (l.status === "open" ? l.interestCount : 0), 0);
   return (
     <>
-      <div className="card mb-4 flex items-center gap-3">
-        <span className="grid size-14 place-items-center rounded-full bg-brand text-xl font-extrabold text-brand-fg">
-          {user.displayName.charAt(0).toUpperCase()}
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-lg font-bold">{user.displayName}</p>
-          <p className="text-sm text-fg-muted">
-            {mine.length} tin đã đăng · {ints.length} tin đang quan tâm
-          </p>
-        </div>
-      </div>
+      <Link href="/app/toi" className="mb-3 inline-block text-sm text-fg-subtle">← Tôi</Link>
+      <h1 className="mb-4 text-xl font-bold">Chợ của tôi</h1>
       <div className="mb-4 grid grid-cols-2 rounded-xl border border-border bg-surface p-1 text-sm font-semibold">
         <Link href="/app/cua-toi" className={cn("rounded-lg py-2 text-center", tab === "tin" ? "bg-surface-2 text-fg" : "text-fg-subtle")}>
           Tin của tôi {waiting > 0 ? <span className="ml-1 rounded-full bg-coin px-1.5 text-[11px] text-brand-fg">{waiting}</span> : null}

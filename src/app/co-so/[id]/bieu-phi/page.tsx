@@ -4,9 +4,19 @@ import { Flash, PageTitle } from "@/components/ui";
 import { dmy, vnd } from "@/lib/format";
 import { requireActor } from "@/lib/session";
 import { baseUrl } from "@/lib/url";
+import { isDraft, propertyUsage } from "@/server/property-lifecycle";
 import { listStaff } from "@/server/staff";
 import { getProperty, listFeeRules, today } from "@/server/queries";
-import { createStaffInviteAction, removeStaffAction, setFeeRuleAction, setLocationAction, updatePropertyAction } from "../../actions";
+import {
+  archivePropertyAction,
+  createStaffInviteAction,
+  deletePropertyAction,
+  removeStaffAction,
+  restorePropertyAction,
+  setFeeRuleAction,
+  setLocationAction,
+  updatePropertyAction,
+} from "../../actions";
 import { PropertyFields } from "../../property-fields";
 
 const METHOD_LABEL = {
@@ -29,6 +39,7 @@ export default async function Page({
   if (!property) notFound();
   const sp = await searchParams;
   const staff = actor.role === "owner" ? await listStaff(actor, id) : [];
+  const usage = actor.role === "owner" ? await propertyUsage(actor, id) : null;
 
   return (
     <>
@@ -172,6 +183,48 @@ export default async function Page({
             <form action={createStaffInviteAction}>
               <input type="hidden" name="propertyId" value={id} />
               <button className="btn-secondary">Tạo link mời nhân viên</button>
+            </form>
+          )}
+        </section>
+      ) : null}
+
+      {usage ? (
+        <section id="khu" className="card mt-6 space-y-3 border-danger/30">
+          <h2 className="font-semibold">Xóa hoặc lưu trữ khu</h2>
+          {usage.archived ? (
+            <>
+              <p className="text-sm text-fg-muted">Khu đang được lưu trữ: ẩn khỏi danh sách, chợ và Hôm nay. Dữ liệu vẫn giữ nguyên.</p>
+              <form action={restorePropertyAction}>
+                <input type="hidden" name="propertyId" value={id} />
+                <button className="btn">Khôi phục khu</button>
+              </form>
+            </>
+          ) : isDraft(usage) ? (
+            <form action={deletePropertyAction} className="space-y-3">
+              <input type="hidden" name="propertyId" value={id} />
+              <p className="text-sm text-fg-muted">
+                Khu chưa có hợp đồng hay hóa đơn nào nên có thể xóa hẳn. Sẽ xóa luôn {usage.units} phòng, đồng hồ, chỉ số, biểu phí,
+                nhân viên được giao và bảng tin của khu. Không hoàn tác được.
+              </p>
+              <div>
+                <label className="label" htmlFor="confirmName">
+                  Gõ lại tên khu <b className="text-fg">{property.name}</b> để xác nhận
+                </label>
+                <input className="input" id="confirmName" name="confirmName" autoComplete="off" required />
+              </div>
+              <button className="btn-danger">Xóa hẳn khu</button>
+            </form>
+          ) : (
+            <form action={archivePropertyAction} className="space-y-3">
+              <input type="hidden" name="propertyId" value={id} />
+              <p className="text-sm text-fg-muted">
+                Khu đã có {usage.leases} hợp đồng và {usage.periods} kỳ hóa đơn nên không xóa hẳn được (giữ chứng từ thu tiền). Lưu trữ
+                sẽ ẩn khu khỏi danh sách, chợ và Hôm nay; khôi phục được bất cứ lúc nào.
+                {usage.activeLeases > 0 ? ` Hiện còn ${usage.activeLeases} hợp đồng đang thuê, cần ghi nhận chuyển đi trước.` : ""}
+              </p>
+              <button className="btn-danger" disabled={usage.activeLeases > 0}>
+                Lưu trữ khu
+              </button>
             </form>
           )}
         </section>
