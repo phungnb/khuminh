@@ -34,6 +34,9 @@ Cập nhật: 2026-10-14, KM-HN (điều hướng 4 tab + trang Hôm nay, PR ch�
   bán kính chọn ở Quanh đây được nhớ bằng cookie km_r (middleware) và Hôm nay dùng chung; Quanh đây lọc theo nhu cầu
   (Mua bán, Cần mua, Cho tặng, Sửa chữa, Dọn dẹp/giặt ủi, Dịch vụ khác); Tiện ích có 4 nhóm Xem tin/Đăng tin điền sẵn;
   Tôi có mục Quản lý khu; trang /app/nguoi/[id] "tin của người này" (chỉ trong 20 km quanh khu người xem). Plan: khuminh/KM-HN2_plan-v1.0.md.
+- KM-HN2 T5 (không migration, dùng cột archived_at có sẵn): chủ trọ xóa hẳn khu NHÁP (chưa từng có hợp đồng/kỳ; gõ lại tên để xác nhận),
+  hoặc lưu trữ khu đã dùng (không còn hợp đồng đang thuê) và khôi phục; ở Cài đặt khu (#khu) và /quan-ly "Khu đã lưu trữ". Có audit
+  property.delete/archive/restore. Nhân viên không làm được. src/server/property-lifecycle.ts.
 - CHƯA có: giới hạn đăng nhập sai (anh quyết chưa làm), gửi email/OTP, giám sát lỗi, xác nhận sao lưu.
 
 ## Môi trường

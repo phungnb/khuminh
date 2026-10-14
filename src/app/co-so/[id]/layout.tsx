@@ -47,7 +47,15 @@ export default async function Layout({ children, params }: { children: React.Rea
           ))}
         </nav>
       </header>
-      <main className="mx-auto max-w-5xl px-4 py-6">{children}</main>
+      <main className="mx-auto max-w-5xl px-4 py-6">
+        {property.archivedAt ? (
+          <p className="card mb-4 border-warning/40 text-sm">
+            Khu này đang được lưu trữ, cư dân không còn thấy trong chợ và Hôm nay.{" "}
+            <Link href={`/co-so/${id}/bieu-phi#khu`} className="font-semibold text-brand-ink">Khôi phục</Link>
+          </p>
+        ) : null}
+        {children}
+      </main>
     </div>
   );
 }
