@@ -42,6 +42,17 @@ export const sessions = pgTable("sessions", {
   createdAt: createdAt(),
 });
 
+/**
+ * Admin nền tảng. Bật RLS, KHÔNG có policy: app không đọc/ghi được; chỉ các hàm SECURITY DEFINER
+ * admin_* (drizzle/0009_platform_admin.sql) đọc. Thêm admin bằng scripts/grant-admin.ts (role chủ bảng).
+ */
+export const platformAdmins = pgTable("platform_admins", {
+  userId: uuid("user_id")
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  createdAt: createdAt(),
+});
+
 export const organizations = pgTable("organizations", {
   id: id(),
   name: text("name").notNull(),

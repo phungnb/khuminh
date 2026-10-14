@@ -37,6 +37,9 @@ Cập nhật: 2026-10-14, KM-HN (điều hướng 4 tab + trang Hôm nay, PR ch�
 - KM-HN2 T5 (không migration, dùng cột archived_at có sẵn): chủ trọ xóa hẳn khu NHÁP (chưa từng có hợp đồng/kỳ; gõ lại tên để xác nhận),
   hoặc lưu trữ khu đã dùng (không còn hợp đồng đang thuê) và khôi phục; ở Cài đặt khu (#khu) và /quan-ly "Khu đã lưu trữ". Có audit
   property.delete/archive/restore. Nhân viên không làm được. src/server/property-lifecycle.ts.
+- KM-HN2 T6 (migration 0009_platform_admin): bảng platform_admins bật RLS không policy + REVOKE khỏi khuminh_app; hàm SECURITY DEFINER
+  is_platform_admin/admin_stats/admin_reported_listings tự kiểm admin (assert_platform_admin). Trang /admin, cấp quyền bằng scripts/grant-admin.ts.
+  setup-db REVOKE lại platform_admins sau lệnh GRANT ALL TABLES. Chưa có thao tác ẩn tin/khóa tài khoản (T7).
 - CHƯA có: giới hạn đăng nhập sai (anh quyết chưa làm), gửi email/OTP, giám sát lỗi, xác nhận sao lưu.
 
 ## Môi trường

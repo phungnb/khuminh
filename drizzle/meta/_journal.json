@@ -64,6 +64,13 @@
       "when": 1791944074142,
       "tag": "0008_maintenance",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1791965140023,
+      "tag": "0009_platform_admin",
+      "breakpoints": true
     }
   ]
 }

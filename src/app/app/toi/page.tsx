@@ -1,7 +1,8 @@
-import { Building2, FileText, Heart, House, LogOut, Megaphone, Shield } from "lucide-react";
+import { Building2, FileText, Gauge, Heart, House, LogOut, Megaphone, Shield } from "lucide-react";
 import { PushToggle } from "@/components/push-toggle";
 import { vnd } from "@/lib/format";
 import { requireUser } from "@/lib/session";
+import { isPlatformAdmin } from "@/server/admin";
 import { actorFor } from "@/server/auth";
 import { myInterests, myListings } from "@/server/market";
 import { pushPublicKey } from "@/server/push";
@@ -15,7 +16,13 @@ export const dynamic = "force-dynamic";
 // Tôi: hồ sơ, nhà và nơi ở, quản lý khu (nếu là chủ trọ/nhân viên), tin đã đăng, cài đặt. Việc cần xử lý (hóa đơn, sự cố) vẫn hiện ở Hôm nay.
 export default async function Page() {
   const user = await requireUser();
-  const [homes, mine, ints, actor] = await Promise.all([tenantHome(user.id), myListings(user.id), myInterests(user.id), actorFor(user.id)]);
+  const [homes, mine, ints, actor, admin] = await Promise.all([
+    tenantHome(user.id),
+    myListings(user.id),
+    myInterests(user.id),
+    actorFor(user.id),
+    isPlatformAdmin(user.id),
+  ]);
   const active = homes.filter((h) => h.active);
   const owed = dueInvoices(homes).reduce((s, d) => s + d.owed, 0);
   const waiting = mine.reduce((n, l) => n + (l.status === "open" ? l.interestCount : 0), 0);
@@ -61,6 +68,13 @@ export default async function Page() {
             title={actor.role === "owner" ? "Khu của tôi" : "Khu được giao"}
             hint="Phòng, chỉ số điện nước, hóa đơn, sự cố, nhân viên"
           />
+        </section>
+      ) : null}
+
+      {admin ? (
+        <section className="mb-6 space-y-2">
+          <h2 className="text-sm font-semibold text-fg-subtle">Admin</h2>
+          <MenuLink href="/admin" icon={Gauge} title="Toàn nền tảng" hint="Số liệu tổng, tin bị báo cáo" />
         </section>
       ) : null}
 

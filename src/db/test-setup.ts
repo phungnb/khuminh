@@ -27,5 +27,7 @@ export async function setup() {
   await migrate(drizzle(owner), { migrationsFolder: "drizzle" });
   await owner.end();
 
+  // Kết nối chủ bảng cho test cần làm việc ngoài quyền app (vd. cấp admin nền tảng).
+  process.env.TEST_OWNER_DATABASE_URL = ownerUrl;
   process.env.DATABASE_URL_APP = withDb(ADMIN, DB, "khuminh_app", process.env.TEST_APP_PASSWORD ?? "change-me");
 }
