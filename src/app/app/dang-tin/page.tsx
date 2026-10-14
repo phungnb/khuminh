@@ -13,8 +13,12 @@ const KIND_HINT: Record<ListingKind, string> = {
   service: "Nhận sửa, dọn, nấu, dạy…",
 };
 
-export default async function Page({ searchParams }: { searchParams: Promise<{ loi?: string; ok?: string }> }) {
+export default async function Page({ searchParams }: { searchParams: Promise<{ loi?: string; ok?: string; k?: string; c?: string }> }) {
+  const sp = await searchParams;
   const user = await requireUser();
+  // Mở từ Tiện ích thì điền sẵn loại tin và danh mục.
+  const kind: ListingKind = sp.k && sp.k in LISTING_KIND_LABEL ? (sp.k as ListingKind) : "sell";
+  const category = sp.c && (CATEGORIES as readonly string[]).includes(sp.c) ? sp.c : "Khác";
   const usable = (await marketPlaces(user.id)).filter((p) => p.location);
   if (usable.length === 0) {
     return (
@@ -26,14 +30,14 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ l
   return (
     <>
       <PageTitle>Đăng tin</PageTitle>
-      <Flash params={await searchParams} />
+      <Flash params={sp} />
       <form action={createListingAction} className="card space-y-4">
         <fieldset>
           <legend className="label">Loại tin</legend>
           <div className="grid grid-cols-2 gap-2">
-            {(Object.keys(LISTING_KIND_LABEL) as ListingKind[]).map((k, i) => (
+            {(Object.keys(LISTING_KIND_LABEL) as ListingKind[]).map((k) => (
               <label key={k} className="flex cursor-pointer items-start gap-2 rounded-lg border border-border p-2 has-[:checked]:border-brand-ink has-[:checked]:bg-brand/20">
-                <input type="radio" name="kind" value={k} defaultChecked={i === 0} className="mt-1" />
+                <input type="radio" name="kind" value={k} defaultChecked={k === kind} className="mt-1" />
                 <span>
                   <span className="block text-sm font-semibold">{LISTING_KIND_LABEL[k]}</span>
                   <span className="block text-xs text-fg-subtle">{KIND_HINT[k]}</span>
@@ -49,7 +53,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ l
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="label" htmlFor="category">Danh mục</label>
-            <select className="input" id="category" name="category" defaultValue="Khác">
+            <select className="input" id="category" name="category" defaultValue={category}>
               {CATEGORIES.map((c) => (
                 <option key={c} value={c}>{c}</option>
               ))}

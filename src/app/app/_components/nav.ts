@@ -12,7 +12,7 @@ export interface Tab {
 
 export const TABS: Tab[] = [
   { href: "/app", label: "Hôm nay", icon: "today", match: [] },
-  { href: "/app/quanh-day", label: "Quanh đây", icon: "near", match: ["/app/tin"] },
+  { href: "/app/quanh-day", label: "Quanh đây", icon: "near", match: ["/app/tin", "/app/nguoi"] },
   { href: "/app/dang-tin", label: "Đăng tin", icon: "post", match: [], center: true },
   { href: "/app/tien-ich", label: "Tiện ích", icon: "tools", match: ["/app/su-co", "/app/bang-tin"] },
   { href: "/app/toi", label: "Tôi", icon: "me", match: ["/app/nha", "/app/cua-toi", "/app/hoa-don"] },

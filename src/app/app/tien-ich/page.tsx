@@ -1,13 +1,23 @@
-import { Building2, Gift, Hammer, Megaphone, ReceiptText, Sparkles, Wrench } from "lucide-react";
+import Link from "next/link";
+import { Building2, Gift, Hammer, Megaphone, ReceiptText, Sparkles, Store, Wrench, type LucideIcon } from "lucide-react";
 import { requireUser } from "@/lib/session";
 import { actorFor } from "@/server/auth";
 import { reportablePlaces } from "@/server/maintenance";
 import { MenuLink } from "../_components/menu-link";
+import { postHref, purposeParams, PURPOSES } from "../_components/purposes";
 
 export const dynamic = "force-dynamic";
 
-// Tiện ích: chỉ liệt kê việc làm được ngay hôm nay. Dịch vụ có nhà cung cấp xác minh, đặt lịch,
-// theo dõi là giai đoạn sau (cần bảng mới, chờ duyệt), nên chưa hiện ở đây.
+// Bốn nhóm theo góp ý 1.docx; mỗi nhóm xem tin hoặc đăng tin điền sẵn loại và danh mục.
+const GROUPS: Array<{ key: string; icon: LucideIcon }> = [
+  { key: "sua-chua", icon: Hammer },
+  { key: "don-dep", icon: Sparkles },
+  { key: "mua-ban", icon: Store },
+  { key: "cho-tang", icon: Gift },
+];
+
+// Tiện ích: chỉ liệt kê việc làm được ngay hôm nay. Gian hàng, nhà cung cấp xác minh, đặt lịch
+// là giai đoạn sau (cần bảng mới, chờ duyệt), nên chưa hiện ở đây.
 export default async function Page() {
   const user = await requireUser();
   const [places, actor] = await Promise.all([reportablePlaces(user.id), actorFor(user.id)]);
@@ -28,14 +38,30 @@ export default async function Page() {
 
       <section className="mb-6 space-y-2">
         <h2 className="text-sm font-semibold text-fg-subtle">Quanh đây</h2>
-        <MenuLink href="/app/quanh-day?k=service&c=S%E1%BB%ADa%20ch%E1%BB%AFa" icon={Hammer} title="Sửa chữa" hint="Tin nhận sửa điện nước, đồ gia dụng quanh bạn" />
-        <MenuLink
-          href="/app/quanh-day?k=service&c=D%E1%BB%8Dn%20d%E1%BA%B9p%2C%20gi%E1%BA%B7t%20%E1%BB%A7i"
-          icon={Sparkles}
-          title="Dọn dẹp, giặt ủi"
-          hint="Tin nhận dọn nhà, giặt sấy quanh bạn"
-        />
-        <MenuLink href="/app/quanh-day?k=give" icon={Gift} title="Cho tặng" hint="Đồ còn dùng được hàng xóm cho lại" />
+        {GROUPS.map(({ key, icon: Icon }) => {
+          const p = PURPOSES.find((x) => x.key === key)!;
+          return (
+            <div key={key} className="card">
+              <div className="flex items-center gap-3">
+                <span className="grid size-10 shrink-0 place-items-center rounded-full bg-surface-2 text-brand-ink">
+                  <Icon className="size-5" aria-hidden />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block font-semibold">{p.label}</span>
+                  <span className="block text-sm text-fg-subtle">{p.hint}</span>
+                </span>
+              </div>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <Link href={`/app/quanh-day?${new URLSearchParams(purposeParams(p)).toString()}`} className="btn-secondary text-sm">
+                  Xem tin
+                </Link>
+                <Link href={postHref(p)} className="btn text-sm">
+                  Đăng tin
+                </Link>
+              </div>
+            </div>
+          );
+        })}
         <p className="px-1 text-xs text-fg-subtle">
           Đây là tin cư dân tự đăng, KhuMình chưa xác minh người nhận việc. Hỏi rõ giá và thời gian trước khi nhận.
         </p>

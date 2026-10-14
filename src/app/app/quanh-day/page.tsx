@@ -4,10 +4,12 @@ import { CategoryIcon } from "@/components/category";
 import { ListingGrid } from "@/components/listing-card";
 import { EmptyState, Flash } from "@/components/ui";
 import { wallBackground } from "@/lib/club-themes";
-import { parseRadius, RADII_KM } from "@/lib/geo";
+import { cookies } from "next/headers";
+import { parseRadius, RADII_KM, RADIUS_COOKIE } from "@/lib/geo";
 import { cn } from "@/lib/cn";
 import { requireUser } from "@/lib/session";
 import { CATEGORIES, LISTING_KIND_LABEL, marketPlaces, searchListings, type ListingKind, type Place } from "@/server/market";
+import { purposeOf, purposeParams, PURPOSES } from "../_components/purposes";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +24,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Sp>
   if (usable.length === 0) return <NoPlace places={places} />;
 
   const place = usable.find((p) => p.key === sp.o) ?? usable[0]!;
-  const radius = parseRadius(sp.r);
+  const radius = parseRadius(sp.r ?? (await cookies()).get(RADIUS_COOKIE)?.value);
   const kind = sp.k && sp.k in LISTING_KIND_LABEL ? (sp.k as ListingKind) : undefined;
   const category = sp.c && (CATEGORIES as readonly string[]).includes(sp.c) ? sp.c : undefined;
   const q = sp.q?.trim() || undefined;
@@ -88,11 +90,22 @@ export default async function Page({ searchParams }: { searchParams: Promise<Sp>
 
       <Flash params={sp} />
 
+      {!q && !kind && !category ? (
+        <p className="mt-3 text-sm text-fg-muted">
+          Chợ của hàng xóm trong {radius} km: mua bán đồ cũ, cho tặng, tìm người sửa chữa, dọn dẹp. Bấm “Quan tâm” trên tin, người
+          đăng đồng ý thì hai bên mới thấy số điện thoại của nhau.
+        </p>
+      ) : null}
+
       <div className="scrollbar-none mt-3 -mx-4 flex gap-2 overflow-x-auto px-4">
-        <Link href={href({ k: undefined })} className={cn("chip", !kind && "chip-on")}>Tất cả</Link>
-        {(Object.keys(LISTING_KIND_LABEL) as ListingKind[]).map((k) => (
-          <Link key={k} href={href({ k })} className={cn("chip", k === kind && "chip-on")}>
-            {LISTING_KIND_LABEL[k]}
+        <Link href={href({ k: undefined, c: undefined })} className={cn("chip", !kind && "chip-on")}>Tất cả</Link>
+        {PURPOSES.map((p) => (
+          <Link
+            key={p.key}
+            href={href({ c: undefined, ...purposeParams(p) })}
+            className={cn("chip whitespace-nowrap", purposeOf(kind, category)?.key === p.key && "chip-on")}
+          >
+            {p.label}
           </Link>
         ))}
       </div>

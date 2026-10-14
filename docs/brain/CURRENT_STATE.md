@@ -30,6 +30,10 @@ Cập nhật: 2026-10-14, KM-HN (điều hướng 4 tab + trang Hôm nay, PR ch�
   sự cố chưa xong của cơ sở mình quản lý, 4 tin chợ gần 3 km); không có nội dung mẫu. Chợ chuyển sang /app/quanh-day
   (link cũ /app?o=… tự chuyển). "Nhà tôi" thành "Nhà và nơi ở" (/app/nha) trong Tôi (/app/toi). Logic chọn ở src/server/today.ts.
   Định vị CHƯA đổi (vẫn theo PRD V1.0); phản biện: khuminh/KM-HN_phan-bien-v1.0.md trên thư mục project.
+- KM-HN2 gói 1 (PR chồng lên PR #6, không migration): Hôm nay có "Mới hôm nay quanh bạn" (tin 24 giờ);
+  bán kính chọn ở Quanh đây được nhớ bằng cookie km_r (middleware) và Hôm nay dùng chung; Quanh đây lọc theo nhu cầu
+  (Mua bán, Cần mua, Cho tặng, Sửa chữa, Dọn dẹp/giặt ủi, Dịch vụ khác); Tiện ích có 4 nhóm Xem tin/Đăng tin điền sẵn;
+  Tôi có mục Quản lý khu; trang /app/nguoi/[id] "tin của người này" (chỉ trong 20 km quanh khu người xem). Plan: khuminh/KM-HN2_plan-v1.0.md.
 - CHƯA có: giới hạn đăng nhập sai (anh quyết chưa làm), gửi email/OTP, giám sát lỗi, xác nhận sao lưu.
 
 ## Môi trường

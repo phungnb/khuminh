@@ -1,21 +1,24 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Building2, CheckCircle2, Hammer, Gift, Megaphone, ReceiptText, Store, Wrench, type LucideIcon } from "lucide-react";
-import { ago, ListingGrid } from "@/components/listing-card";
+import { ago, ListingGrid, priceText } from "@/components/listing-card";
 import { Badge, EmptyState, Flash } from "@/components/ui";
 import { PAYMENT_STATE_LABEL } from "@/domain/payments";
 import { wallBackground } from "@/lib/club-themes";
 import { dmy, vnd } from "@/lib/format";
-import { DEFAULT_RADIUS_KM } from "@/lib/geo";
+import { cookies } from "next/headers";
+import { parseRadius, RADIUS_COOKIE } from "@/lib/geo";
 import { requireUser } from "@/lib/session";
 import { actorFor } from "@/server/auth";
 import { listPosts, tenantBoardViewer, type PostRow } from "@/server/board";
 import { MAINTENANCE_STATUS_LABEL, openMaintenanceCount, tenantMaintenanceRequests } from "@/server/maintenance";
-import { marketPlaces, searchListings } from "@/server/market";
+import { marketPlaces, searchListings, type ListingKind } from "@/server/market";
 import { tenantHome } from "@/server/tenant";
 import { dueInvoices, freshAnnouncements, incidentsToShow } from "@/server/today";
 
 export const dynamic = "force-dynamic";
+
+const FRESH_VERB: Record<ListingKind, string> = { sell: "đang bán", want: "cần mua", give: "cho tặng", service: "đăng dịch vụ" };
 
 type Sp = { loi?: string; ok?: string; o?: string; r?: string; k?: string; c?: string; q?: string };
 
@@ -32,6 +35,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Sp>
 
   const user = await requireUser();
   const now = new Date();
+  const radius = parseRadius((await cookies()).get(RADIUS_COOKIE)?.value);
   const [homes, requests, places] = await Promise.all([tenantHome(user.id), tenantMaintenanceRequests(user.id), marketPlaces(user.id)]);
 
   const activeHomes = [...new Map(homes.filter((h) => h.active).map((h) => [`${h.orgId}.${h.propertyId}`, h])).values()];
@@ -39,7 +43,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Sp>
   const managed = places.filter((p) => p.role === "manager");
   const place = places.find((p) => p.location && p.role === "tenant") ?? places.find((p) => p.location);
 
-  const [boards, managerIncidents, nearby] = await Promise.all([
+  const [boards, managerIncidents, recent] = await Promise.all([
     Promise.all(
       activeHomes.map(async (h) => (await listPosts(await tenantBoardViewer(user.id, h.orgId, h.propertyId), 20)).map((p) => ({ ...p, place: h.propertyName }))),
     ),
@@ -50,8 +54,12 @@ export default async function Page({ searchParams }: { searchParams: Promise<Sp>
         return { name: p.name, propertyId, open: actor ? await openMaintenanceCount(actor, propertyId) : 0 };
       }),
     ),
-    place ? searchListings(user.id, place.location!, DEFAULT_RADIUS_KM, {}, 4) : Promise.resolve([]),
+    place ? searchListings(user.id, place.location!, radius, {}, 12) : Promise.resolve([]),
   ]);
+  // "Mới hôm nay": tin đăng trong 24 giờ, kể tên người đăng như kể chuyện hàng xóm.
+  const dayAgo = now.getTime() - 24 * 60 * 60 * 1000;
+  const fresh = recent.filter((l) => l.createdAt.getTime() >= dayAgo).slice(0, 5);
+  const nearby = recent.filter((l) => !fresh.some((f) => f.id === l.id)).slice(0, 4);
 
   const due = dueInvoices(homes);
   const incidents = incidentsToShow(requests, now);
@@ -172,8 +180,33 @@ export default async function Page({ searchParams }: { searchParams: Promise<Sp>
         </>
       ) : null}
 
+      {fresh.length > 0 && place ? (
+        <>
+          <h2 className="mt-6 mb-2 text-lg font-semibold">Mới hôm nay quanh bạn</h2>
+          <ul className="card divide-y divide-border p-0">
+            {fresh.map((l) => (
+              <li key={l.id}>
+                <Link href={`/app/tin/${l.id}?o=${encodeURIComponent(place.key)}`} className="flex items-center gap-3 px-4 py-3 hover:bg-surface-2">
+                  <span className="grid size-9 shrink-0 place-items-center rounded-full bg-surface-2 text-sm font-bold">
+                    {l.authorName.charAt(0).toUpperCase()}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm">
+                      <span className="font-semibold">{l.authorName}</span> {FRESH_VERB[l.kind]} <span className="font-semibold">{l.title}</span>
+                    </span>
+                    <span className="block text-xs text-fg-subtle">
+                      {priceText(l)} · gần {l.areaLabel} · {ago(l.createdAt)}
+                    </span>
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </>
+      ) : null}
+
       <div className="mt-6 mb-2 flex items-baseline justify-between">
-        <h2 className="text-lg font-semibold">Quanh bạn {DEFAULT_RADIUS_KM} km</h2>
+        <h2 className="text-lg font-semibold">Quanh bạn {radius} km</h2>
         {place ? (
           <Link href="/app/quanh-day" className="text-sm font-medium text-brand-ink">
             Xem tất cả
@@ -186,10 +219,10 @@ export default async function Page({ searchParams }: { searchParams: Promise<Sp>
           title="Chưa có khu trên bản đồ"
           description="Tin mua bán, cho tặng, dịch vụ quanh nhà hiện khi khu của bạn có vị trí. Nhờ chủ nhà gửi link mời hoặc đặt vị trí cơ sở."
         />
-      ) : nearby.length === 0 ? (
+      ) : recent.length === 0 ? (
         <EmptyState
           icon={Store}
-          title="Chưa có tin nào gần đây"
+          title={`Chưa có tin nào trong ${radius} km`}
           description="Đồ cũ còn dùng được, món tự nấu, nhận sửa đồ: đăng tin đầu tiên cho hàng xóm."
           action={
             <Link href="/app/dang-tin" className="btn">
@@ -197,8 +230,10 @@ export default async function Page({ searchParams }: { searchParams: Promise<Sp>
             </Link>
           }
         />
-      ) : (
+      ) : nearby.length > 0 ? (
         <ListingGrid items={nearby} query={`?o=${encodeURIComponent(place.key)}`} />
+      ) : (
+        <p className="text-sm text-fg-muted">Các tin quanh bạn đều mới đăng hôm nay, xem ở trên.</p>
       )}
     </>
   );

@@ -111,6 +111,23 @@ describe("chợ quanh đây", () => {
     expect(raw!.lat).toBe(10.775);
   });
 
+  it("lọc tin mới trong 24 giờ và tin của một người đăng", async () => {
+    const centerA = { lat: 10.7731, lng: 106.6991 };
+    const old = await createListing(tA2, { kind: "service", category: "Sửa chữa", title: "Nhận sửa quạt", contact: "0901112223", placeKey: keyA });
+    await withUser(tA2, (tx) => tx.update(s.listings).set({ createdAt: new Date(Date.now() - 2 * 24 * 3600 * 1000) }).where(eq(s.listings.id, old)));
+    const since = new Date(Date.now() - 24 * 3600 * 1000);
+    const fresh = await searchListings(tB, centerA, 20, { since });
+    expect(fresh.map((l) => l.id)).not.toContain(old);
+    expect(fresh.length).toBeGreaterThan(0);
+
+    const byAuthor = await searchListings(tB, centerA, 20, { authorId: tA2 });
+    expect(byAuthor.map((l) => [l.title, l.authorId])).toEqual([["Nhận sửa quạt", tA2]]);
+    // Ngoài bán kính của người xem thì không thấy tin của người đó.
+    expect(await searchListings(tB, { lat: 21.03, lng: 105.85 }, 20, { authorId: tA2 })).toEqual([]);
+    await closeListing(tA2, old);
+    expect(await searchListings(tB, centerA, 20, { authorId: tA2 })).toEqual([]);
+  });
+
   it("liên hệ chỉ lộ khi người đăng đồng ý", async () => {
     const id = await createListing(tA, { kind: "sell", category: "Xe cộ", title: "Xe đạp", price: 500_000, contact: "0909000111", placeKey: keyA });
     expect((await getListing(tA, id, null))!.contact).toBe("0909000111");
