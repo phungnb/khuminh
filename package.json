@@ -17,8 +17,10 @@
     "check:rls": "tsx scripts/check-rls.ts"
   },
   "dependencies": {
+    "clsx": "2.1.1",
     "drizzle-orm": "0.45.4",
     "exceljs": "4.4.0",
+    "lucide-react": "0.468.0",
     "next": "15.5.26",
     "postgres": "3.4.7",
     "qrcode": "1.5.4",

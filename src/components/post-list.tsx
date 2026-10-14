@@ -3,9 +3,9 @@ import { vnd } from "@/lib/format";
 
 const KIND_STYLE: Record<string, string> = {
   announcement: "bg-teal-100 text-teal-800",
-  sell: "bg-amber-100 text-amber-800",
-  give: "bg-emerald-100 text-emerald-800",
-  want: "bg-sky-100 text-sky-800",
+  sell: "bg-warning/15 text-warning",
+  give: "bg-success/15 text-success",
+  want: "bg-xp/15 text-xp",
 };
 
 function ago(d: Date): string {
@@ -25,7 +25,7 @@ export function PostList({ posts, actions }: { posts: PostRow[]; actions?: (p: P
           <div className="mb-1 flex flex-wrap items-center gap-2 text-xs">
             <span className={`rounded px-2 py-0.5 font-semibold ${KIND_STYLE[p.kind]}`}>{POST_KIND_LABEL[p.kind]}</span>
             {p.closed ? <span className="rounded bg-surface-2 px-2 py-0.5 font-semibold text-fg-muted">Đã xong</span> : null}
-            {p.hidden ? <span className="rounded bg-red-100 px-2 py-0.5 font-semibold text-red-700">Đã ẩn</span> : null}
+            {p.hidden ? <span className="rounded bg-danger/15 px-2 py-0.5 font-semibold text-danger">Đã ẩn</span> : null}
             <span className="text-fg-subtle">
               {p.authorName}
               {p.fromManager ? " · Chủ trọ" : ""} · {ago(p.createdAt)}

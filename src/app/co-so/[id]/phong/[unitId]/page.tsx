@@ -49,7 +49,7 @@ export default async function Page({
           <div className="rounded-md bg-surface-2 p-3">
             <h3 className="text-sm font-semibold">App người thuê</h3>
             {current.tenant.userId ? (
-              <p className="text-sm text-emerald-700">Đã có tài khoản: người thuê xem hóa đơn và quét QR trong app.</p>
+              <p className="text-sm text-success">Đã có tài khoản: người thuê xem hóa đơn và quét QR trong app.</p>
             ) : sp.moi ? (
               <>
                 <p className="mb-2 text-sm text-fg-muted">Gửi tin nhắn này cho người thuê. Link dùng được một lần, hết hạn sau 14 ngày.</p>

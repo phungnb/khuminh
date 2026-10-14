@@ -72,7 +72,7 @@ export default async function Page({
                 <td>
                   Đã trả {dmy(p.payment.receivedOn)} ({p.payment.method === "cash" ? "tiền mặt" : p.payment.method === "transfer" ? "chuyển khoản" : "khác"})
                 </td>
-                <td className="text-right text-emerald-700">−{vnd(p.allocated)}</td>
+                <td className="text-right text-success">−{vnd(p.allocated)}</td>
               </tr>
             ))}
             <tr>

@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { Badge, Flash } from "@/components/ui";
+import { House, Megaphone } from "lucide-react";
+import { Badge, EmptyState, Flash } from "@/components/ui";
 import { PAYMENT_STATE_LABEL } from "@/domain/payments";
 import { dmy, vnd } from "@/lib/format";
 import { requireUser } from "@/lib/session";
@@ -14,9 +15,11 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ l
   const homes = await tenantHome(user.id);
   if (homes.length === 0) {
     return (
-      <div className="card text-center text-sm text-fg-muted">
-        Tài khoản chưa gắn với phòng nào. Nếu bạn đang thuê trọ, xin chủ nhà gửi link mời để xem hóa đơn và bảng tin khu trọ.
-      </div>
+      <EmptyState
+        icon={House}
+        title="Chưa gắn với phòng nào"
+        description="Nếu bạn đang thuê trọ, xin chủ nhà gửi link mời để xem hóa đơn, mã QR và bảng tin khu trọ."
+      />
     );
   }
   const publicKey = pushPublicKey();
@@ -24,8 +27,12 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ l
     <>
       <Flash params={await searchParams} />
       {publicKey ? <PushToggle publicKey={publicKey} /> : null}
-      <Link href="/app/bang-tin" className="card mb-4 block font-semibold hover:border-brand-strong">
-        Bảng tin khu trọ <span className="font-normal text-fg-subtle">· thông báo của chủ nhà, tin trong khu</span>
+      <Link href="/app/bang-tin" className="card mb-4 flex items-center gap-3 hover:border-fg-subtle">
+        <span className="grid size-10 place-items-center rounded-full bg-surface-2 text-brand"><Megaphone className="size-5" aria-hidden /></span>
+        <span className="min-w-0">
+          <span className="block font-semibold">Bảng tin khu trọ</span>
+          <span className="block text-sm text-fg-subtle">Thông báo của chủ nhà, tin trong khu</span>
+        </span>
       </Link>
       {homes.map((h) => {
         const open = h.invoices.filter((i) => i.state === "unpaid" || i.state === "partial" || i.state === "overdue");
@@ -37,7 +44,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ l
               Phòng {h.unitCode}
               {h.active ? null : <span className="ml-2 text-sm font-normal text-fg-subtle">(đã chuyển đi)</span>}
             </h1>
-            <div className={`card mt-3 ${owed > 0 ? "border-amber-300 bg-amber-50" : ""}`}>
+            <div className={`card mt-3 ${owed > 0 ? "border-warning/40 bg-warning/10" : ""}`}>
               {owed > 0 ? (
                 <>
                   <p className="text-sm text-fg-muted">Cần thanh toán</p>
@@ -47,7 +54,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ l
                   </Link>
                 </>
               ) : (
-                <p className="font-semibold text-emerald-800">Bạn không còn khoản nào cần trả.</p>
+                <p className="font-semibold text-success">Bạn không còn khoản nào cần trả.</p>
               )}
             </div>
             {h.invoices.length > 0 ? (

@@ -42,7 +42,7 @@ export async function InvoiceView({ inv }: { inv: PublicInvoice }) {
             {inv.paid > 0 ? (
               <tr>
                 <td>Đã trả</td>
-                <td className="text-right text-emerald-700">−{vnd(inv.paid)}</td>
+                <td className="text-right text-success">−{vnd(inv.paid)}</td>
               </tr>
             ) : null}
             <tr>
@@ -54,13 +54,13 @@ export async function InvoiceView({ inv }: { inv: PublicInvoice }) {
       </section>
 
       {due === 0 && inv.status === "issued" ? (
-        <p className="mt-4 rounded-md bg-emerald-50 p-3 text-center font-semibold text-emerald-800">Đã thanh toán đủ. Cảm ơn bạn.</p>
+        <p className="mt-4 rounded-md bg-success/15 p-3 text-center font-semibold text-success">Đã thanh toán đủ. Cảm ơn bạn.</p>
       ) : null}
 
       {qrSvg && inv.bank ? (
         <section className="card mt-4 text-center">
           <h2 className="font-semibold">Quét mã để chuyển khoản</h2>
-          <div className="mx-auto my-3 w-60" dangerouslySetInnerHTML={{ __html: qrSvg }} />
+          <div className="mx-auto my-3 w-60 rounded-xl bg-white p-2" dangerouslySetInnerHTML={{ __html: qrSvg }} />
           <p className="text-sm">
             {bankName} · {inv.bank.accountNo}
             {inv.bank.accountName ? ` · ${inv.bank.accountName}` : ""}

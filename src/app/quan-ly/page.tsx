@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Logo } from "@/components/ui";
 import { wallBackground } from "@/lib/club-themes";
 import { requireActor } from "@/lib/session";
 import { listProperties } from "@/server/queries";
@@ -12,10 +13,10 @@ export default async function Page() {
   const props = await listProperties(actor);
   return (
     <div>
-      <header className="border-b border-border bg-surface">
+      <header className="sticky top-0 z-40 border-b border-border bg-bg/85 backdrop-blur-md">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-2 px-4 py-3">
           <div className="flex items-center gap-2">
-            <Link href="/app" className="font-bold text-fg">Khu<span className="text-brand-ink">Mình</span></Link>
+            <Link href="/app" aria-label="KhuMình — về chợ"><Logo /></Link>
             <span className="text-fg-subtle">/</span>
             <span className="font-semibold">Quản lý khu</span>
           </div>

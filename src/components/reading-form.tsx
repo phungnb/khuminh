@@ -77,7 +77,7 @@ export function ReadingInputs({ rows, storageKey }: { rows: ReadingRow[]; storag
                 aria-label={`Chỉ số ${r.name} phòng ${r.unitCode}`}
               />
               {used !== null ? (
-                <div className={`mt-1 text-xs ${used < 0 ? "font-semibold text-red-700" : "text-fg-muted"}`}>
+                <div className={`mt-1 text-xs ${used < 0 ? "font-semibold text-danger" : "text-fg-muted"}`}>
                   {used < 0 ? `Chỉ số giảm ${used.toLocaleString("vi-VN")}. Kiểm tra lại.` : `Dùng ${used.toLocaleString("vi-VN")}`}
                 </div>
               ) : null}
