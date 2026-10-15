@@ -9,8 +9,8 @@ import { emptyMoney, EXPIRING_WITHIN_DAYS, previousMonth, SETTLE_WITHIN_DAYS, ty
 import { listProperties, propertyMoney, today, unitsOverview } from "./queries";
 
 /** Tổng quan mọi cơ sở người dùng được thấy (nhân viên: chỉ cơ sở được giao). */
-export async function orgOverview(actor: Actor, t: IsoDate = today()): Promise<PropertySummary[]> {
-  const props = await listProperties(actor);
+export async function orgOverview(actor: Actor, t: IsoDate = today(), onlyPropertyId?: string): Promise<PropertySummary[]> {
+  const props = (await listProperties(actor)).filter((p) => !onlyPropertyId || p.id === onlyPropertyId);
   if (props.length === 0) return [];
   const ids = props.map((p) => p.id);
   const unitLists = await Promise.all(ids.map((id) => unitsOverview(actor, id, t)));
