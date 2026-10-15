@@ -1,11 +1,13 @@
-import { AlarmClock, BadgeCheck, CalendarClock, CircleDollarSign, DoorClosed, DoorOpen, Gauge, House, MapPinOff, TriangleAlert, Users, Wrench } from "lucide-react";
+import { AlarmClock, BadgeCheck, Calculator, CircleCheck, CircleDollarSign, Circle, DoorOpen, Gauge, House, MapPinOff, TriangleAlert, Users, Wrench } from "lucide-react";
 import Link from "next/link";
 import { CoSoWall } from "@/components/co-so-wall";
+import { ActionList } from "@/components/org-overview";
 import { Flash, Stat } from "@/components/ui";
-import { dmy, vnd } from "@/lib/format";
+import { vnd } from "@/lib/format";
 import { requireActor } from "@/lib/session";
-import { openMaintenanceCount } from "@/server/maintenance";
-import { dashboard, getProperty } from "@/server/queries";
+import { orgOverview } from "@/server/overview";
+import { actionItems } from "@/server/overview-items";
+import { dashboard, getProperty, listFeeRules, listPeriods, today } from "@/server/queries";
 
 export default async function Page({
   params,
@@ -16,7 +18,26 @@ export default async function Page({
 }) {
   const { id } = await params;
   const actor = await requireActor();
-  const [property, d, issues] = await Promise.all([getProperty(actor, id), dashboard(actor, id), openMaintenanceCount(actor, id)]);
+  const t = today();
+  const [property, d, summary, periods, fees] = await Promise.all([
+    getProperty(actor, id),
+    dashboard(actor, id),
+    orgOverview(actor, t, id),
+    listPeriods(actor, id),
+    listFeeRules(actor, id),
+  ]);
+  const items = actionItems(summary, t, vnd);
+  // Kỳ đang mở gần nhất đã bắt đầu: nút "Tính tiền" đưa thẳng vào màn tính theo phòng.
+  const current = periods.find((p) => p.status === "open" && p.periodStart <= t);
+  const month = (d: string) => `${d.slice(5, 7)}/${d.slice(0, 4)}`;
+  // Cơ sở chưa có ai thuê: hướng dẫn các bước để ra hóa đơn đầu tiên.
+  const steps = [
+    { done: fees.length > 0, label: "Đặt biểu phí điện, nước, dịch vụ", href: `/co-so/${id}/bieu-phi` },
+    { done: d.units.total > 0, label: "Thêm phòng", href: `/co-so/${id}/phong` },
+    { done: d.units.occupied > 0, label: "Thêm người thuê vào phòng (giá thuê, cọc, ngày thu)", href: `/co-so/${id}/phong` },
+    { done: false, label: "Ghi chỉ số điện nước ngày vào ở", href: `/co-so/${id}/chi-so` },
+    { done: periods.length > 0, label: "Mở kỳ tháng rồi tính tiền từng phòng", href: `/co-so/${id}/ky` },
+  ];
   return (
     <>
       <CoSoWall
@@ -36,17 +57,18 @@ export default async function Page({
           </span>
         </div>
       ) : null}
-      {issues > 0 ? (
-        <Link href={`/co-so/${id}/su-co`} className="mt-4 block rounded-md border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">
-          {issues} sự cố đang chờ xử lý. <span className="font-semibold underline">Xem</span>
-        </Link>
-      ) : null}
-      <div className="mt-4 mb-4 flex items-center justify-between gap-2">
-        <h2 className="font-semibold">Tổng quan</h2>
-        <Link className="btn" href={`/co-so/${id}/chi-so`}>
-          <Gauge className="size-4" />
-          Ghi chỉ số
-        </Link>
+      <div className="mt-4 mb-4 flex flex-wrap items-center justify-between gap-2">
+        <h2 className="shrink-0 font-semibold">Tổng quan</h2>
+        <div className="flex flex-wrap gap-2">
+          <Link className="btn-secondary whitespace-nowrap" href={`/co-so/${id}/chi-so`}>
+            <Gauge className="size-4" />
+            Ghi chỉ số
+          </Link>
+          <Link className="btn whitespace-nowrap" href={current ? `/co-so/${id}/ky/${current.id}` : `/co-so/${id}/ky`}>
+            <Calculator className="size-4" />
+            {current ? `Tính tiền T${month(current.periodStart)}` : "Mở kỳ tính tiền"}
+          </Link>
+        </div>
       </div>
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <Stat icon={CircleDollarSign} label="Phải thu (đã phát hành)" value={vnd(d.receivable)} />
@@ -60,29 +82,22 @@ export default async function Page({
         <Stat icon={DoorOpen} label="Trống" value={String(d.units.vacant)} />
         <Stat icon={Wrench} label="Bảo trì" value={String(d.units.maintenance)} />
       </div>
-      <section className="card mt-6">
-        <h2 className="mb-2 flex items-center gap-2 font-semibold">
-          <CalendarClock className="size-4 text-fg-muted" />
-          Hợp đồng hết hạn trong 30 ngày
-        </h2>
-        {d.expiring.length === 0 ? (
-          <p className="text-sm text-fg-subtle">Không có.</p>
-        ) : (
-          <ul className="divide-y divide-border text-sm">
-            {d.expiring.map((e) => (
-              <li key={e.unitCode + e.expiresOn} className="flex items-center justify-between gap-3 py-2">
-                <span className="flex min-w-0 items-center gap-2">
-                  <DoorClosed className="size-4 shrink-0 text-fg-subtle" />
-                  <span className="truncate">
-                    Phòng <b>{e.unitCode}</b> · {e.tenantName}
-                  </span>
-                </span>
-                <span className="shrink-0 text-warning">{dmy(e.expiresOn)}</span>
+      {d.units.occupied === 0 ? (
+        <section className="card mt-6">
+          <h2 className="mb-2 font-semibold">Bắt đầu với cơ sở này</h2>
+          <ol className="space-y-1 text-sm">
+            {steps.map((st) => (
+              <li key={st.label}>
+                <Link href={st.href} className="flex items-center gap-2 rounded-md px-1 py-1.5 hover:bg-surface-2">
+                  {st.done ? <CircleCheck className="size-4 shrink-0 text-success" /> : <Circle className="size-4 shrink-0 text-fg-subtle" />}
+                  <span className={st.done ? "text-fg-muted line-through" : ""}>{st.label}</span>
+                </Link>
               </li>
             ))}
-          </ul>
-        )}
-      </section>
+          </ol>
+        </section>
+      ) : null}
+      <ActionList items={items} showProperty={false} />
     </>
   );
 }

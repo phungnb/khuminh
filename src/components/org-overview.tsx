@@ -2,7 +2,7 @@ import { AlarmClock, CalendarClock, HandCoins, KeyRound, ChevronRight, CircleAle
 import Link from "next/link";
 import type { IsoDate } from "@/domain/dates";
 import { vnd } from "@/lib/format";
-import { actionItems, sumTotals, type ActionKind, type PropertySummary } from "@/server/overview-items";
+import { actionItems, sumTotals, type ActionItem, type ActionKind, type PropertySummary } from "@/server/overview-items";
 
 const KIND_ICON: Record<ActionKind, React.ComponentType<{ className?: string }>> = {
   unpaid: CircleDollarSign,
@@ -97,6 +97,15 @@ export function OrgOverview({ props, selected, t }: { props: PropertySummary[]; 
         ) : null}
       </div>
 
+      <ActionList items={items} showProperty={props.length > 1 && !selected} />
+    </section>
+  );
+}
+
+/** Danh sách "Cần xử lý" (dùng ở /quan-ly và trang tổng quan từng cơ sở). */
+export function ActionList({ items, showProperty }: { items: ActionItem[]; showProperty: boolean }) {
+  return (
+    <>
       <h2 className="mt-6 mb-2 font-semibold">Cần xử lý</h2>
       {items.length === 0 ? (
         <p className="card text-sm text-fg-subtle">Không có việc gì cần làm ngay.</p>
@@ -111,7 +120,7 @@ export function OrgOverview({ props, selected, t }: { props: PropertySummary[]; 
                   <span className="min-w-0 flex-1">
                     <span className="block font-semibold">{it.title}</span>
                     <span className="block text-sm text-fg-subtle">
-                      {props.length > 1 && !selected ? `${it.propertyName} · ` : ""}
+                      {showProperty ? `${it.propertyName} · ` : ""}
                       {it.detail}
                     </span>
                   </span>
@@ -122,6 +131,6 @@ export function OrgOverview({ props, selected, t }: { props: PropertySummary[]; 
           })}
         </ul>
       )}
-    </section>
+    </>
   );
 }
