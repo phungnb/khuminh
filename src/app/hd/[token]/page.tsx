@@ -27,6 +27,11 @@ export default async function Page({ params }: { params: Promise<{ token: string
         <Logo />
       </div>
       <InvoiceView inv={inv} />
+      <div className="mt-4 flex justify-center">
+        <a className="btn-secondary" href={`/hd/${token}/anh`} download={`hoa-don-${inv.code}.png`}>
+          Lưu ảnh hóa đơn
+        </a>
+      </div>
       <p className="mt-6 text-center text-xs text-fg-subtle">Tạo bởi KhuMình, chợ tiện ích quanh nhà</p>
     </main>
   );

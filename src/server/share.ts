@@ -5,6 +5,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { and, asc, eq, sql } from "drizzle-orm";
 import { getDb, withOrg, type Tx } from "@/db/client";
 import {
+  billingPeriods,
   invoiceAdjustments,
   invoiceLines,
   invoiceShareTokens,
@@ -40,6 +41,8 @@ export interface PublicInvoice {
   status: "issued" | "void";
   propertyName: string;
   unitCode: string;
+  periodStart: string;
+  periodEnd: string;
   dueDate: string;
   total: number;
   paid: number;
@@ -71,10 +74,18 @@ export async function resolveShareLink(token: string): Promise<PublicInvoice | n
 /** Hóa đơn đã phát hành/đã hủy ở dạng người thuê xem được; null nếu là nháp. Gọi trong withOrg. */
 export async function loadInvoiceView(tx: Tx, invoiceId: string): Promise<PublicInvoice | null> {
   const [row] = await tx
-    .select({ inv: invoices, propertyName: properties.name, unitCode: units.code, property: properties })
+    .select({
+      inv: invoices,
+      propertyName: properties.name,
+      unitCode: units.code,
+      property: properties,
+      periodStart: billingPeriods.periodStart,
+      periodEnd: billingPeriods.periodEnd,
+    })
     .from(invoices)
     .innerJoin(properties, eq(properties.id, invoices.propertyId))
     .innerJoin(units, eq(units.id, invoices.unitId))
+    .innerJoin(billingPeriods, eq(billingPeriods.id, invoices.billingPeriodId))
     .where(eq(invoices.id, invoiceId));
   if (!row || row.inv.status === "draft") return null;
   const [lines, adjustments, paidRows] = await Promise.all([
@@ -102,6 +113,8 @@ export async function loadInvoiceView(tx: Tx, invoiceId: string): Promise<Public
     status: row.inv.status as "issued" | "void",
     propertyName: row.propertyName,
     unitCode: row.unitCode,
+    periodStart: row.periodStart,
+    periodEnd: row.periodEnd,
     dueDate: row.inv.dueDate,
     total: row.inv.total,
     paid,
