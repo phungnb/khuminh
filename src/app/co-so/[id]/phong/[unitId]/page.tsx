@@ -5,7 +5,7 @@ import { dmy, vnd } from "@/lib/format";
 import { requireActor } from "@/lib/session";
 import { baseUrl } from "@/lib/url";
 import { today, unitDetail } from "@/server/queries";
-import { changeRentAction, createLeaseAction, createTenantInviteAction, moveOutAction } from "../../../actions";
+import { changeRentAction, createLeaseAction, createTenantInviteAction, extendLeaseAction, moveOutAction } from "../../../actions";
 
 export default async function Page({
   params,
@@ -80,6 +80,37 @@ export default async function Page({
               </form>
             )}
           </div>
+          {actor.role === "owner" ? (
+            <div className="space-y-2">
+              <h3 className="text-sm font-semibold">
+                Gia hạn hợp đồng
+                {current.lease.expiresOn && current.lease.expiresOn < today() ? (
+                  <span className="ml-2 font-normal text-danger">đã hết hạn {dmy(current.lease.expiresOn)}</span>
+                ) : null}
+              </h3>
+              <div className="flex flex-wrap items-end gap-2">
+                {[6, 12].map((m) => (
+                  <form key={m} action={extendLeaseAction}>
+                    {hidden}
+                    <input type="hidden" name="leaseId" value={current.lease.id} />
+                    <input type="hidden" name="current" value={current.lease.expiresOn ?? ""} />
+                    <input type="hidden" name="months" value={m} />
+                    <button className="btn-secondary">+{m} tháng</button>
+                  </form>
+                ))}
+                <form action={extendLeaseAction} className="flex flex-wrap items-end gap-2">
+                  {hidden}
+                  <input type="hidden" name="leaseId" value={current.lease.id} />
+                  <div>
+                    <label className="label">Hoặc tới ngày</label>
+                    <input className="input" type="date" name="expiresOn" required />
+                  </div>
+                  <button className="btn-secondary">Lưu</button>
+                </form>
+              </div>
+              <p className="text-xs text-fg-subtle">Gia hạn tính từ ngày hết hạn cũ; hợp đồng đã quá hạn thì tính từ hôm nay. Không đổi giá thuê.</p>
+            </div>
+          ) : null}
           <form action={changeRentAction} className="flex flex-wrap items-end gap-2">
             {hidden}
             <input type="hidden" name="leaseId" value={current.lease.id} />

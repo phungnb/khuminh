@@ -235,6 +235,31 @@ export async function changeRent(actor: Actor, leaseId: string, effectiveFrom: I
   });
 }
 
+/** Gia hạn hợp đồng đang ở: đổi ngày hết hạn ghi trên hợp đồng. Không đổi tiền, chỉ để nhắc. */
+export async function extendLease(actor: Actor, leaseId: string, expiresOn: IsoDate): Promise<void> {
+  requireOwner(actor);
+  assertIsoDate(expiresOn);
+  await withOrg(actor, async (tx) => {
+    const [lease] = await tx.select().from(leases).where(eq(leases.id, leaseId)).for("update");
+    if (!lease) throw new UserError("Không tìm thấy hợp đồng");
+    if (lease.status !== "active" || lease.movedOutOn) throw new UserError("Chỉ gia hạn được hợp đồng đang ở");
+    if (expiresOn <= lease.startDate) throw new UserError("Ngày hết hạn phải sau ngày vào ở");
+    await tx.update(leases).set({ expiresOn }).where(eq(leases.id, leaseId));
+    await audit(tx, actor, "lease.extend", "lease", leaseId, { expiresOn: lease.expiresOn }, { expiresOn });
+  });
+}
+
+/** Ngày hết hạn mới khi gia hạn thêm `months` tháng, tính từ hạn cũ (hoặc từ hôm nay nếu chưa có/đã quá). */
+export function extendedDate(current: IsoDate | null, months: number, on: IsoDate): IsoDate {
+  const from = current && current >= on ? current : on;
+  const [y, m, d] = from.split("-").map(Number) as [number, number, number];
+  const total = y * 12 + (m - 1) + months;
+  const ny = Math.floor(total / 12);
+  const nm = (total % 12) + 1;
+  const last = new Date(Date.UTC(ny, nm, 0)).getUTCDate();
+  return `${ny}-${String(nm).padStart(2, "0")}-${String(Math.min(d, last)).padStart(2, "0")}`;
+}
+
 export async function moveOut(actor: Actor, leaseId: string, lastDay: IsoDate): Promise<void> {
   requireOwner(actor);
   assertIsoDate(lastDay);

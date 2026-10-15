@@ -2,7 +2,9 @@ import Link from "next/link";
 import { Empty, Flash, PageTitle } from "@/components/ui";
 import { dmy, vnd } from "@/lib/format";
 import { requireActor } from "@/lib/session";
-import { unitsOverview } from "@/server/queries";
+import { addDays } from "@/domain/dates";
+import { today, unitsOverview } from "@/server/queries";
+import { EXPIRING_WITHIN_DAYS } from "@/server/overview-items";
 import { importUnitsAction } from "../../actions";
 
 export default async function Page({
@@ -14,7 +16,8 @@ export default async function Page({
 }) {
   const { id } = await params;
   const actor = await requireActor();
-  const units = await unitsOverview(actor, id);
+  const t = today();
+  const units = await unitsOverview(actor, id, t);
   return (
     <>
       <PageTitle>Phòng</PageTitle>
@@ -43,7 +46,10 @@ export default async function Page({
                   </td>
                   <td>{u.lease ? `${u.lease.tenantName} (${u.lease.occupants} người)` : <span className="text-fg-subtle">Trống</span>}</td>
                   <td className="text-right">{u.lease ? vnd(u.lease.rent) : ""}</td>
-                  <td>{dmy(u.lease?.expiresOn)}</td>
+                  <td>
+                    <span className="whitespace-nowrap">{dmy(u.lease?.expiresOn)}</span>
+                    {u.lease?.expiresOn ? <ExpiryTag expiresOn={u.lease.expiresOn} t={t} /> : null}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -65,4 +71,11 @@ export default async function Page({
       </form>
     </>
   );
+}
+
+function ExpiryTag({ expiresOn, t }: { expiresOn: string; t: string }) {
+  if (expiresOn < t) return <span className="mt-1 block w-fit whitespace-nowrap rounded-full bg-danger/15 px-2 py-0.5 text-xs font-semibold text-danger">đã hết hạn</span>;
+  if (expiresOn <= addDays(t, EXPIRING_WITHIN_DAYS))
+    return <span className="mt-1 block w-fit whitespace-nowrap rounded-full bg-warning/15 px-2 py-0.5 text-xs font-semibold text-warning">sắp hết hạn</span>;
+  return null;
 }

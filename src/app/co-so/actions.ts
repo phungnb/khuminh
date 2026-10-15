@@ -6,6 +6,7 @@ import { parseIntField, parseMoney, parseReading } from "@/lib/format";
 import { parseLocation } from "@/lib/geo";
 import { requireActor } from "@/lib/session";
 import { UserError } from "@/server/audit";
+import { today } from "@/server/queries";
 import { adjustInvoice, generateDrafts, issueInvoices, voidInvoice } from "@/server/billing";
 import { setPropertyLocation } from "@/server/market";
 import { recordPayment, voidPayment } from "@/server/payments";
@@ -14,6 +15,8 @@ import {
   changeRent,
   createLease,
   createProperty,
+  extendedDate,
+  extendLease,
   importUnits,
   moveOut,
   openPeriod,
@@ -108,6 +111,17 @@ export async function changeRentAction(f: FormData) {
   const actor = await requireActor();
   const back = `/co-so/${str(f, "propertyId")}/phong/${str(f, "unitId")}`;
   await runAction(back, () => changeRent(actor, str(f, "leaseId"), str(f, "effectiveFrom"), money(f, "amount", "Giá thuê")), "Đã đổi giá thuê");
+}
+
+export async function extendLeaseAction(f: FormData) {
+  const actor = await requireActor();
+  const back = `/co-so/${str(f, "propertyId")}/phong/${str(f, "unitId")}`;
+  await runAction(back, async () => {
+    const months = Number(str(f, "months"));
+    const date = months > 0 ? extendedDate(str(f, "current") || null, months, today()) : str(f, "expiresOn");
+    await extendLease(actor, str(f, "leaseId"), date);
+    return `${back}?ok=${encodeURIComponent(`Đã gia hạn hợp đồng tới ${date.split("-").reverse().join("/")}`)}`;
+  });
 }
 
 export async function moveOutAction(f: FormData) {
