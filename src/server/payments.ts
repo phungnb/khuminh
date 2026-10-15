@@ -43,7 +43,9 @@ export async function paymentRemainders(tx: Tx, leaseId: string) {
       id: payments.id,
       amount: payments.amount,
       receivedOn: payments.receivedOn,
-      allocated: sql<string>`coalesce((select sum(a.amount) from payment_allocations a where a.payment_id = ${payments.id}), 0)`,
+      // Ghi rõ "payments"."id": truy vấn một bảng thì drizzle bỏ tên bảng, "id" sẽ bị hiểu là a.id
+      // (của payment_allocations) và mọi thanh toán trông như chưa phân bổ đồng nào.
+      allocated: sql<string>`coalesce((select sum(a.amount) from payment_allocations a where a.payment_id = "payments"."id"), 0)`,
     })
     .from(payments)
     .where(and(eq(payments.leaseId, leaseId), isNull(payments.voidedAt)))
