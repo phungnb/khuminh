@@ -179,6 +179,8 @@ export const leases = pgTable(
     movedOutOn: date("moved_out_on"),
     deposit: money("deposit").notNull().default(0),
     occupants: integer("occupants").notNull().default(1),
+    /** Ngày thu tiền theo thỏa thuận (1–28). Hạn trả hóa đơn = ngày này của tháng sau cuối kỳ; trống thì dùng hạn chung của cơ sở. */
+    dueDay: integer("due_day"),
     documentKey: text("document_key"),
     createdAt: createdAt(),
   },
@@ -336,7 +338,8 @@ export const invoiceAdjustments = pgTable("invoice_adjustments", {
   createdAt: createdAt(),
 });
 
-export const paymentMethod = pgEnum("payment_method", ["cash", "transfer", "other"]);
+/** "deposit": cấn trừ tiền cọc vào nợ khi quyết toán trả phòng, không phải tiền mới thu vào. */
+export const paymentMethod = pgEnum("payment_method", ["cash", "transfer", "other", "deposit"]);
 
 export const payments = pgTable(
   "payments",
@@ -367,6 +370,45 @@ export const paymentAllocations = pgTable("payment_allocations", {
   invoiceId: uuid("invoice_id").notNull().references(() => invoices.id),
   amount: money("amount").notNull(),
 });
+
+export const lastMonthMode = pgEnum("last_month_mode", ["daily", "full_month"]);
+
+/**
+ * Quyết toán cọc khi trả phòng (KM-COC). Lưu ảnh chụp số liệu lúc quyết toán; tiền thật đi qua
+ * điều chỉnh hóa đơn (bù tháng, khấu trừ) và một thanh toán method=deposit (cấn trừ cọc).
+ * Mỗi hợp đồng chỉ có một bản quyết toán còn hiệu lực.
+ */
+export const depositSettlements = pgTable(
+  "deposit_settlements",
+  {
+    id: id(),
+    orgId: orgId(),
+    leaseId: uuid("lease_id").notNull().references(() => leases.id),
+    /** Hóa đơn cuối (kỳ chứa ngày chuyển đi), nơi ghi dòng bù tháng và khấu trừ. */
+    finalInvoiceId: uuid("final_invoice_id").notNull().references(() => invoices.id),
+    settledOn: date("settled_on").notNull(),
+    lastMonthMode: lastMonthMode("last_month_mode").notNull(),
+    depositHeld: money("deposit_held").notNull(),
+    depositHeldNote: text("deposit_held_note"),
+    debtBefore: money("debt_before").notNull(),
+    fullMonthTopUp: money("full_month_top_up").notNull().default(0),
+    deductions: jsonb("deductions").$type<Array<{ reason: string; amount: number }>>().notNull(),
+    /** Tiền khách trả dư trước đó, dùng trừ nợ trước cọc. */
+    creditApplied: money("credit_applied").notNull().default(0),
+    depositApplied: money("deposit_applied").notNull(),
+    refundDue: money("refund_due").notNull(),
+    tenantOwes: money("tenant_owes").notNull(),
+    depositPaymentId: uuid("deposit_payment_id").references(() => payments.id),
+    refundedOn: date("refunded_on"),
+    refundMethod: paymentMethod("refund_method"),
+    note: text("note"),
+    createdBy: uuid("created_by").references(() => users.id),
+    createdAt: createdAt(),
+    voidedAt: timestamp("voided_at", { withTimezone: true }),
+    voidReason: text("void_reason"),
+  },
+  (t) => [uniqueIndex("deposit_settlements_lease_live").on(t.leaseId).where(sql`voided_at is null`)],
+);
 
 /** Link hóa đơn gửi người thuê. Chỉ lưu băm SHA-256 của token. */
 export const invoiceShareTokens = pgTable("invoice_share_tokens", {

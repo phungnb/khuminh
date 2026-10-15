@@ -10,7 +10,7 @@ import { allocatePayment, type OpenInvoice } from "@/domain/payments";
 import { audit, requireOwner, UserError, type Actor } from "./audit";
 
 /** Hóa đơn đã phát hành của hợp đồng kèm số đã trả. Khóa dòng để tránh ghi đồng thời. */
-async function openInvoicesForLease(tx: Tx, leaseId: string): Promise<OpenInvoice[]> {
+export async function openInvoicesForLease(tx: Tx, leaseId: string): Promise<OpenInvoice[]> {
   const rows = await tx
     .select({
       id: invoices.id,
@@ -37,7 +37,7 @@ async function openInvoicesForLease(tx: Tx, leaseId: string): Promise<OpenInvoic
 }
 
 /** Phần thanh toán chưa phân bổ của từng khoản thanh toán còn hiệu lực. */
-async function paymentRemainders(tx: Tx, leaseId: string) {
+export async function paymentRemainders(tx: Tx, leaseId: string) {
   const rows = await tx
     .select({
       id: payments.id,
@@ -91,12 +91,55 @@ export interface RecordPaymentResult {
   duplicate: boolean;
 }
 
+/**
+ * Ghi một khoản thanh toán và phân bổ vào hóa đơn còn nợ của hợp đồng, trong giao dịch có sẵn.
+ * Dùng chung cho thu tiền thường và cấn trừ cọc khi quyết toán (method = "deposit"). Không ghi audit.
+ */
+export async function insertPaymentTx(
+  tx: Tx,
+  actor: Actor,
+  input: Omit<RecordPaymentInput, "method" | "idempotencyKey"> & {
+    propertyId: string;
+    method: "cash" | "transfer" | "other" | "deposit";
+    idempotencyKey: string | null;
+  },
+): Promise<{ paymentId: string; allocations: Array<{ invoiceId: string; amount: number }>; unallocated: number }> {
+  const open = await openInvoicesForLease(tx, input.leaseId);
+  for (const id of input.invoiceIds ?? []) {
+    if (!open.some((o) => o.id === id)) throw new UserError("Hóa đơn được chọn không thuộc hợp đồng hoặc chưa phát hành");
+  }
+  const { allocations, unallocated } = allocatePayment(input.amount, open, input.invoiceIds);
+  const [p] = await tx
+    .insert(payments)
+    .values({
+      orgId: actor.orgId,
+      propertyId: input.propertyId,
+      leaseId: input.leaseId,
+      amount: input.amount,
+      method: input.method,
+      receivedOn: input.receivedOn,
+      reference: input.reference?.trim() || null,
+      note: input.note?.trim() || null,
+      recordedBy: actor.userId,
+      idempotencyKey: input.idempotencyKey,
+    })
+    .returning({ id: payments.id });
+  if (allocations.length) {
+    await tx.insert(paymentAllocations).values(
+      allocations.map((a) => ({ orgId: actor.orgId, paymentId: p!.id, invoiceId: a.invoiceId, amount: a.amount })),
+    );
+  }
+  return { paymentId: p!.id, allocations, unallocated };
+}
+
 export async function recordPayment(actor: Actor, input: RecordPaymentInput): Promise<RecordPaymentResult> {
   requireOwner(actor);
   assertDong(input.amount, "số tiền");
   if (input.amount <= 0) throw new UserError("Số tiền phải lớn hơn 0");
   assertIsoDate(input.receivedOn);
   if (!input.idempotencyKey) throw new UserError("Thiếu khóa chống trùng");
+  // "deposit" chỉ do quyết toán cọc ghi (src/server/deposit.ts), không nhận từ form thu tiền.
+  if (!["cash", "transfer", "other"].includes(input.method)) throw new UserError("Hình thức thanh toán không hợp lệ");
 
   return withOrg(actor, async (tx) => {
     const [dup] = await tx
@@ -118,34 +161,13 @@ export async function recordPayment(actor: Actor, input: RecordPaymentInput): Pr
       .where(eq(leases.id, input.leaseId));
     if (!lease) throw new UserError("Không tìm thấy hợp đồng");
 
-    const open = await openInvoicesForLease(tx, lease.id);
-    for (const id of input.invoiceIds ?? []) {
-      if (!open.some((o) => o.id === id)) throw new UserError("Hóa đơn được chọn không thuộc hợp đồng hoặc chưa phát hành");
-    }
-    const { allocations, unallocated } = allocatePayment(input.amount, open, input.invoiceIds);
-
-    const [p] = await tx
-      .insert(payments)
-      .values({
-        orgId: actor.orgId,
-        propertyId: lease.propertyId,
-        leaseId: lease.id,
-        amount: input.amount,
-        method: input.method,
-        receivedOn: input.receivedOn,
-        reference: input.reference?.trim() || null,
-        note: input.note?.trim() || null,
-        recordedBy: actor.userId,
-        idempotencyKey: input.idempotencyKey,
-      })
-      .returning({ id: payments.id });
-    if (allocations.length) {
-      await tx.insert(paymentAllocations).values(
-        allocations.map((a) => ({ orgId: actor.orgId, paymentId: p!.id, invoiceId: a.invoiceId, amount: a.amount })),
-      );
-    }
-    await audit(tx, actor, "payment.record", "payment", p!.id, null, { ...input, allocations, unallocated });
-    return { paymentId: p!.id, allocations, unallocated, duplicate: false };
+    const { paymentId, allocations, unallocated } = await insertPaymentTx(tx, actor, {
+      ...input,
+      leaseId: lease.id,
+      propertyId: lease.propertyId,
+    });
+    await audit(tx, actor, "payment.record", "payment", paymentId, null, { ...input, allocations, unallocated });
+    return { paymentId, allocations, unallocated, duplicate: false };
   });
 }
 
@@ -153,12 +175,17 @@ export async function recordPayment(actor: Actor, input: RecordPaymentInput): Pr
 export async function voidPayment(actor: Actor, paymentId: string, reason: string): Promise<void> {
   requireOwner(actor);
   if (!reason.trim()) throw new UserError("Cần ghi lý do hủy");
-  await withOrg(actor, async (tx) => {
-    const [p] = await tx.select().from(payments).where(eq(payments.id, paymentId)).for("update");
-    if (!p) throw new UserError("Không tìm thấy thanh toán");
-    if (p.voidedAt) return;
-    const removed = await tx.delete(paymentAllocations).where(eq(paymentAllocations.paymentId, paymentId)).returning();
-    await tx.update(payments).set({ voidedAt: new Date(), voidReason: reason.trim() }).where(eq(payments.id, paymentId));
-    await audit(tx, actor, "payment.void", "payment", paymentId, { allocations: removed }, { reason });
-  });
+  await withOrg(actor, (tx) => voidPaymentTx(tx, actor, paymentId, reason));
+}
+
+/** Như voidPayment nhưng chạy trong giao dịch có sẵn. */
+export async function voidPaymentTx(tx: Tx, actor: Actor, paymentId: string, reason: string): Promise<void> {
+  requireOwner(actor);
+  if (!reason.trim()) throw new UserError("Cần ghi lý do hủy");
+  const [p] = await tx.select().from(payments).where(eq(payments.id, paymentId)).for("update");
+  if (!p) throw new UserError("Không tìm thấy thanh toán");
+  if (p.voidedAt) return;
+  const removed = await tx.delete(paymentAllocations).where(eq(paymentAllocations.paymentId, paymentId)).returning();
+  await tx.update(payments).set({ voidedAt: new Date(), voidReason: reason.trim() }).where(eq(payments.id, paymentId));
+  await audit(tx, actor, "payment.void", "payment", paymentId, { allocations: removed }, { reason });
 }

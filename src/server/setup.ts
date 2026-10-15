@@ -167,6 +167,13 @@ export interface LeaseInput {
   occupants: number;
   rent: number;
   quantities?: Record<string, number>;
+  /** Ngày thu tiền hằng tháng theo thỏa thuận (1–28); trống thì dùng hạn chung của cơ sở. */
+  dueDay?: number | null;
+}
+
+function assertDueDay(day: number | null | undefined): void {
+  if (day === null || day === undefined) return;
+  if (!Number.isInteger(day) || day < 1 || day > 28) throw new UserError("Ngày thu tiền phải từ 1 đến 28");
 }
 
 export async function createLease(actor: Actor, input: LeaseInput): Promise<string> {
@@ -178,6 +185,7 @@ export async function createLease(actor: Actor, input: LeaseInput): Promise<stri
   if (input.rent <= 0) throw new UserError("Giá thuê phải lớn hơn 0");
   if (!Number.isInteger(input.occupants) || input.occupants < 1) throw new UserError("Số người ở ít nhất là 1");
   if (!input.tenant.fullName.trim()) throw new UserError("Cần nhập tên người thuê");
+  assertDueDay(input.dueDay);
 
   return withOrg(actor, async (tx) => {
     const [unit] = await tx.select().from(units).where(eq(units.id, input.unitId));
@@ -199,6 +207,7 @@ export async function createLease(actor: Actor, input: LeaseInput): Promise<stri
           expiresOn: input.expiresOn ?? null,
           deposit: input.deposit,
           occupants: input.occupants,
+          dueDay: input.dueDay ?? null,
         })
         .returning({ id: leases.id });
       leaseId = l!.id;
@@ -232,6 +241,18 @@ export async function changeRent(actor: Actor, leaseId: string, effectiveFrom: I
       .values({ orgId: actor.orgId, leaseId, effectiveFrom, amount })
       .onConflictDoUpdate({ target: [leaseRents.leaseId, leaseRents.effectiveFrom], set: { amount } });
     await audit(tx, actor, "lease.change_rent", "lease", leaseId, null, { effectiveFrom, amount });
+  });
+}
+
+/** Đổi ngày thu tiền theo thỏa thuận. Áp dụng cho hóa đơn lập từ nay (nháp lập lại cũng theo ngày mới). */
+export async function setLeaseDueDay(actor: Actor, leaseId: string, dueDay: number | null): Promise<void> {
+  requireOwner(actor);
+  assertDueDay(dueDay);
+  await withOrg(actor, async (tx) => {
+    const [lease] = await tx.select().from(leases).where(eq(leases.id, leaseId)).for("update");
+    if (!lease) throw new UserError("Không tìm thấy hợp đồng");
+    await tx.update(leases).set({ dueDay }).where(eq(leases.id, leaseId));
+    await audit(tx, actor, "lease.set_due_day", "lease", leaseId, { dueDay: lease.dueDay }, { dueDay });
   });
 }
 
