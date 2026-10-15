@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CopyBox } from "@/components/copy-box";
+import { ShareImage } from "@/components/share-image";
 import { Badge, Flash, PageTitle } from "@/components/ui";
 import { paymentState, PAYMENT_STATE_LABEL } from "@/domain/payments";
 import { dmy, vnd } from "@/lib/format";
@@ -70,7 +71,7 @@ export default async function Page({
             {d.payments.map((p) => (
               <tr key={p.payment.id}>
                 <td>
-                  Đã trả {dmy(p.payment.receivedOn)} ({p.payment.method === "cash" ? "tiền mặt" : p.payment.method === "transfer" ? "chuyển khoản" : "khác"})
+                  Đã trả {dmy(p.payment.receivedOn)} ({p.payment.method === "cash" ? "tiền mặt" : p.payment.method === "transfer" ? "chuyển khoản" : p.payment.method === "deposit" ? "cấn trừ cọc" : "khác"})
                 </td>
                 <td className="text-right text-success">−{vnd(p.allocated)}</td>
               </tr>
@@ -91,14 +92,19 @@ export default async function Page({
         <div className="mt-6 grid gap-4 md:grid-cols-2">
           <section className="card space-y-3">
             <h2 className="font-semibold">Gửi cho người thuê</h2>
+            <ShareImage
+              src={sp.link ? `/hd/${sp.link}/anh` : `/co-so/${id}/hoa-don/${invoiceId}/anh`}
+              filename={`hoa-don-${inv.code}.png`}
+              text={shareText ?? undefined}
+            />
             {shareText ? (
               <CopyBox text={shareText} />
             ) : (
               <form action={createShareLinkAction}>
                 <input type="hidden" name="invoiceId" value={invoiceId} />
                 <input type="hidden" name="back" value={back} />
-                <button className="btn">Tạo link hóa đơn</button>
-                <p className="mt-2 text-xs text-fg-subtle">Link xem được không cần đăng nhập, hết hạn sau 60 ngày.</p>
+                <button className="btn-secondary">Tạo link hóa đơn</button>
+                <p className="mt-2 text-xs text-fg-subtle">Link xem được không cần đăng nhập, hết hạn sau 60 ngày. Tạo link trước thì ảnh có in link bản mới nhất.</p>
               </form>
             )}
           </section>

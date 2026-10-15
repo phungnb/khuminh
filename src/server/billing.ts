@@ -33,6 +33,15 @@ export interface DraftResult {
   skipped?: "already_issued";
 }
 
+/** Hạn trả theo ngày thu thỏa thuận của hợp đồng: ngày `day` (1–28) của tháng ngay sau tháng cuối kỳ. */
+export function dueDateForDay(periodEnd: IsoDate, day: number): IsoDate {
+  const y = Number(periodEnd.slice(0, 4));
+  const m = Number(periodEnd.slice(5, 7));
+  const ny = m === 12 ? y + 1 : y;
+  const nm = m === 12 ? 1 : m + 1;
+  return `${ny}-${String(nm).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
 function invoiceCode(periodStart: IsoDate, unitCode: string, leaseId: string): string {
   const yymm = periodStart.slice(2, 4) + periodStart.slice(5, 7);
   return `${yymm}-${unitCode}-${leaseId.slice(0, 4)}`.toUpperCase();
@@ -162,7 +171,7 @@ export async function generateDrafts(actor: Actor, periodId: string): Promise<Dr
           status: "draft",
           subtotal: result.total,
           total: result.total,
-          dueDate: period.dueDate,
+          dueDate: lease.dueDay ? dueDateForDay(period.periodEnd, lease.dueDay) : period.dueDate,
         })
         .returning({ id: invoices.id });
       await tx.insert(invoiceLines).values(
@@ -218,30 +227,34 @@ async function lockInvoice(tx: Tx, invoiceId: string) {
 /** Điều chỉnh hóa đơn đã phát hành, ví dụ trừ tiền cọc khi chuyển đi. Bắt buộc có lý do. */
 export async function adjustInvoice(actor: Actor, invoiceId: string, amount: number, reason: string): Promise<void> {
   requireOwner(actor);
+  await withOrg(actor, (tx) => adjustInvoiceTx(tx, actor, invoiceId, amount, reason));
+}
+
+/** Như adjustInvoice nhưng chạy trong giao dịch có sẵn (quyết toán cọc ghi nhiều bước trong một giao dịch). */
+export async function adjustInvoiceTx(tx: Tx, actor: Actor, invoiceId: string, amount: number, reason: string): Promise<void> {
+  requireOwner(actor);
   assertDong(amount, "số tiền điều chỉnh");
   if (amount === 0) throw new UserError("Số tiền điều chỉnh phải khác 0");
   if (!reason.trim()) throw new UserError("Cần ghi lý do điều chỉnh");
-  await withOrg(actor, async (tx) => {
-    const inv = await lockInvoice(tx, invoiceId);
-    if (inv.status !== "issued") throw new UserError("Chỉ điều chỉnh hóa đơn đã phát hành");
-    const [{ paid }] = (await tx
-      .select({ paid: sql<number>`coalesce(sum(${paymentAllocations.amount}), 0)::bigint` })
-      .from(paymentAllocations)
-      .where(eq(paymentAllocations.invoiceId, invoiceId))) as [{ paid: number }];
-    const newTotal = inv.total + amount;
-    if (newTotal < Number(paid)) {
-      throw new UserError("Tổng sau điều chỉnh nhỏ hơn số đã thu; hãy hủy bớt thanh toán trước");
-    }
-    await tx.insert(invoiceAdjustments).values({
-      orgId: actor.orgId,
-      invoiceId,
-      amount,
-      reason: reason.trim(),
-      createdBy: actor.userId,
-    });
-    await tx.update(invoices).set({ total: newTotal }).where(eq(invoices.id, invoiceId));
-    await audit(tx, actor, "invoice.adjust", "invoice", invoiceId, { total: inv.total }, { total: newTotal, amount, reason });
+  const inv = await lockInvoice(tx, invoiceId);
+  if (inv.status !== "issued") throw new UserError("Chỉ điều chỉnh hóa đơn đã phát hành");
+  const [{ paid }] = (await tx
+    .select({ paid: sql<number>`coalesce(sum(${paymentAllocations.amount}), 0)::bigint` })
+    .from(paymentAllocations)
+    .where(eq(paymentAllocations.invoiceId, invoiceId))) as [{ paid: number }];
+  const newTotal = inv.total + amount;
+  if (newTotal < Number(paid)) {
+    throw new UserError("Tổng sau điều chỉnh nhỏ hơn số đã thu; hãy hủy bớt thanh toán trước");
+  }
+  await tx.insert(invoiceAdjustments).values({
+    orgId: actor.orgId,
+    invoiceId,
+    amount,
+    reason: reason.trim(),
+    createdBy: actor.userId,
   });
+  await tx.update(invoices).set({ total: newTotal }).where(eq(invoices.id, invoiceId));
+  await audit(tx, actor, "invoice.adjust", "invoice", invoiceId, { total: inv.total }, { total: newTotal, amount, reason });
 }
 
 /** Hủy hóa đơn. Hóa đơn đã có thanh toán phân bổ thì phải hủy thanh toán trước. */

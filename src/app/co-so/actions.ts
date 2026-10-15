@@ -6,6 +6,7 @@ import { parseIntField, parseMoney, parseReading } from "@/lib/format";
 import { parseLocation } from "@/lib/geo";
 import { requireActor } from "@/lib/session";
 import { UserError } from "@/server/audit";
+import { today } from "@/server/queries";
 import { adjustInvoice, generateDrafts, issueInvoices, voidInvoice } from "@/server/billing";
 import { setPropertyLocation } from "@/server/market";
 import { recordPayment, voidPayment } from "@/server/payments";
@@ -14,11 +15,14 @@ import {
   changeRent,
   createLease,
   createProperty,
+  extendedDate,
+  extendLease,
   importUnits,
   moveOut,
   openPeriod,
   recordReadings,
   setFeeRule,
+  setLeaseDueDay,
   updateProperty,
   type PropertyInput,
 } from "@/server/setup";
@@ -99,6 +103,7 @@ export async function createLeaseAction(f: FormData) {
       rent: money(f, "rent", "Giá thuê"),
       occupants: parseIntField(f.get("occupants")),
       quantities: Number.isNaN(parking) ? {} : { parking },
+      dueDay: str(f, "dueDay") ? parseIntField(f.get("dueDay")) : null,
     });
     return `/co-so/${id}/phong`;
   }, "Đã thêm hợp đồng");
@@ -108,6 +113,27 @@ export async function changeRentAction(f: FormData) {
   const actor = await requireActor();
   const back = `/co-so/${str(f, "propertyId")}/phong/${str(f, "unitId")}`;
   await runAction(back, () => changeRent(actor, str(f, "leaseId"), str(f, "effectiveFrom"), money(f, "amount", "Giá thuê")), "Đã đổi giá thuê");
+}
+
+export async function extendLeaseAction(f: FormData) {
+  const actor = await requireActor();
+  const back = `/co-so/${str(f, "propertyId")}/phong/${str(f, "unitId")}`;
+  await runAction(back, async () => {
+    const months = Number(str(f, "months"));
+    const date = months > 0 ? extendedDate(str(f, "current") || null, months, today()) : str(f, "expiresOn");
+    await extendLease(actor, str(f, "leaseId"), date);
+    return `${back}?ok=${encodeURIComponent(`Đã gia hạn hợp đồng tới ${date.split("-").reverse().join("/")}`)}`;
+  });
+}
+
+export async function setLeaseDueDayAction(f: FormData) {
+  const actor = await requireActor();
+  const back = `/co-so/${str(f, "propertyId")}/phong/${str(f, "unitId")}`;
+  await runAction(
+    back,
+    () => setLeaseDueDay(actor, str(f, "leaseId"), str(f, "dueDay") ? parseIntField(f.get("dueDay")) : null),
+    "Đã lưu ngày thu tiền. Áp dụng cho hóa đơn lập từ nay.",
+  );
 }
 
 export async function moveOutAction(f: FormData) {
@@ -173,6 +199,51 @@ export async function generateDraftsAction(f: FormData) {
       return `${back}?loi=${encodeURIComponent(`Chưa lập được ${failed.length} hóa đơn. ${msg}`)}`;
     }
   }, "Đã lập hóa đơn nháp. Kiểm tra rồi bấm Phát hành.");
+}
+
+/**
+ * Màn Tính tiền: lưu chỉ số của một phòng rồi lập lại nháp cả kỳ (generateDrafts có sẵn, không đổi cách tính).
+ * Chỉ báo lỗi của đúng phòng đang làm; phòng khác thiếu chỉ số là bình thường.
+ */
+export async function calcRoomAction(f: FormData) {
+  const actor = await requireActor();
+  const leaseId = str(f, "leaseId");
+  const base = `/co-so/${str(f, "propertyId")}/ky/${str(f, "periodId")}`;
+  const back = `${base}?phong=${leaseId}`;
+  await runAction(back, async () => {
+    const readings: Array<{ meterId: string; date: string; value: number }> = [];
+    for (const [k, v] of f.entries()) {
+      const m = /^(s|e)_(.+)$/.exec(k);
+      if (!m) continue;
+      const value = parseReading(v);
+      if (value === null) continue;
+      if (Number.isNaN(value)) throw new UserError(`Chỉ số "${String(v)}" không hợp lệ`);
+      readings.push({ meterId: m[2]!, date: str(f, m[1] === "s" ? "startDate" : "endDate"), value });
+    }
+    if (readings.length) await recordReadings(actor, readings);
+    const res = await generateDrafts(actor, str(f, "periodId"));
+    const mine = res.find((r) => r.leaseId === leaseId);
+    if (!mine) throw new UserError("Phòng này không có ngày ở trong kỳ");
+    if (mine.errors.length) {
+      return `${back}&loi=${encodeURIComponent(`Phòng ${mine.unitCode}: ${mine.errors.map((e) => e.message).join("; ")}`)}`;
+    }
+    if (mine.skipped === "already_issued") return `${back}&ok=${encodeURIComponent(`Phòng ${mine.unitCode} đã phát hành hóa đơn, không lập lại.`)}`;
+    return `${back}&ok=${encodeURIComponent(`Phòng ${mine.unitCode}: đã lập nháp. Kiểm tra rồi bấm Phát hành.`)}`;
+  });
+}
+
+/** Phát hành hóa đơn nháp của một phòng từ màn Tính tiền. */
+export async function issueOneAction(f: FormData) {
+  const actor = await requireActor();
+  const back = `/co-so/${str(f, "propertyId")}/ky/${str(f, "periodId")}?phong=${str(f, "leaseId")}`;
+  await runAction(back, async () => {
+    const id = str(f, "invoiceId");
+    const n = await issueInvoices(actor, [id]);
+    if (n === 0) throw new UserError("Hóa đơn không còn ở trạng thái nháp");
+    const { notifyInvoicesIssued } = await import("@/server/push");
+    const pushed = await notifyInvoicesIssued(actor, [id]).catch((e) => (console.error(e), 0));
+    return `${back}&ok=${encodeURIComponent(pushed ? "Đã phát hành và báo trong app." : "Đã phát hành. Gửi ảnh hoặc link cho người thuê.")}`;
+  });
 }
 
 export async function issueAllAction(f: FormData) {

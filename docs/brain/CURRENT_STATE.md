@@ -1,5 +1,5 @@
 # CURRENT_STATE — KhuMình
-Cập nhật: 2026-10-14, KM-HN (điều hướng 4 tab + trang Hôm nay, PR chờ duyệt); thêm KM-SC (báo sự cố) và chặn migrate trên Preview; KM-VH (vá lỗ trước khi dùng thật); trước đó 2026-10-13 thêm chợ quanh đây (rút từ code; mục [ASSUMED] là suy luận từ mã, cần anh xác nhận).
+Cập nhật: 2026-10-15, KM-QLA (việc tháng của chủ trọ, PR chờ duyệt); 2026-10-14, KM-HN (điều hướng 4 tab + trang Hôm nay, PR chờ duyệt); thêm KM-SC (báo sự cố) và chặn migrate trên Preview; KM-VH (vá lỗ trước khi dùng thật); trước đó 2026-10-13 thêm chợ quanh đây (rút từ code; mục [ASSUMED] là suy luận từ mã, cần anh xác nhận).
 
 ## Định vị sản phẩm (CONFIRMED, anh xác nhận 2026-10-13)
 - KhuMình = chợ tiện ích quanh nhà (mua bán, cho tặng, dịch vụ trong bán kính tới 20 km).
@@ -44,6 +44,20 @@ Cập nhật: 2026-10-14, KM-HN (điều hướng 4 tab + trang Hôm nay, PR ch�
   hàm admin_set_listing_hidden / admin_set_user_locked / admin_recent_actions tự kiểm admin, bắt buộc lý do khi ẩn/khóa,
   không khóa được admin. Khóa = xóa mọi phiên + ẩn tin đang mở; signIn báo "đã bị khóa" chỉ sau khi đúng mật khẩu;
   userFromSession lọc locked_at IS NULL. Trang /admin có nút ẩn/hiện tin, khóa/mở khóa người đăng, nhật ký admin.
+- KM-QLA (PR chờ duyệt, không migration, không đổi công thức tiền): học từ app quản lý trọ đối thủ
+  (phân tích: khuminh/KM-DT_doi-thu-app-tro-v1.0.md trên thư mục project). /quan-ly có tổng quan gộp mọi cơ sở
+  (đã thu/phải thu, còn nợ, quá hạn, lấp đầy, lọc theo cơ sở) và khối "Cần xử lý" (hóa đơn chưa thu đủ, chưa mở kỳ
+  tháng trước, phòng chưa lập hóa đơn ở kỳ đã hết, HĐ đã/sắp hết hạn, sự cố mở). Số tiền gộp và trang cơ sở dùng chung
+  propertyMoney (src/server/queries.ts). Trang kỳ thành màn "Tính tiền": mỗi phòng một dòng, nhập chỉ số cuối (và số đầu
+  khi thiếu), lập nháp (gọi generateDrafts cả kỳ), phát hành từng phòng (src/server/worksheet.ts).
+  Hóa đơn dạng ảnh PNG (next/og, font Be Vietnam Pro trong src/assets/fonts) ở /co-so/[id]/hoa-don/[invoiceId]/anh
+  và /hd/[token]/anh; nút "Gửi ảnh hóa đơn (Zalo)" dùng Web Share API, máy không hỗ trợ thì tải ảnh.
+  Gia hạn hợp đồng +6/+12 tháng/chọn ngày (extendLease, audit lease.extend, chỉ owner); danh sách phòng có nhãn đã/sắp hết hạn.
+- KM-COC (hoàn cọc): đặc tả v1.1 khuminh/KM-COC_dac-ta-v1.1.md, cổng HIGH (tiền + migration), chờ `APPROVED: KM-COC plan v1.1`.
+  Code xong trên nhánh cục bộ km-coc, CHƯA đẩy [CONFIRMED test cục bộ]: migration 0011 (deposit_settlements + leases.due_day, RLS bật),
+  src/domain/deposit.ts, src/server/deposit.ts (quyết toán/hoàn/hủy một giao dịch), thẻ trả phòng ở trang phòng (xem trước → xác nhận),
+  phiếu ảnh quyet-toan/anh, ngày thu theo hợp đồng, nhắc "chưa quyết toán"/"chờ hoàn cọc" ở tổng quan.
+  Khoản cấn trừ cọc (payments.method=deposit) chỉ hủy được qua Hủy quyết toán.
 - CHƯA có: giới hạn đăng nhập sai (anh quyết chưa làm), gửi email/OTP, giám sát lỗi, xác nhận sao lưu.
 
 ## Môi trường

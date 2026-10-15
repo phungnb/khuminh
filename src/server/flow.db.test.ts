@@ -186,6 +186,31 @@ describe("chu trình một kỳ", () => {
   });
 });
 
+describe("tiền trả trước khi phát hành hóa đơn mới", () => {
+  it("thanh toán đã dùng hết không bị phân bổ lại vào hóa đơn tháng sau; chỉ phần trả dư mới được dùng", async () => {
+    const a = await newOwner("tt");
+    const p = await createProperty(a, { name: "Trọ TT" });
+    await importUnits(a, p, [{ code: "1" }]);
+    const unit = await unitByCode(a, p, "1");
+    const lease = await createLease(a, { unitId: unit.id, tenant: { fullName: "K" }, startDate: "2026-01-01", deposit: 0, occupants: 1, rent: 1_000_000 });
+    const sep = await openPeriod(a, p, "2026-09-01", "2026-09-30");
+    const [d9] = await generateDrafts(a, sep);
+    await issueInvoices(a, [d9!.invoiceId!]);
+    // Trả đủ tháng 9 và dư 200.000.
+    await recordPayment(a, { leaseId: lease, amount: 1_200_000, method: "cash", receivedOn: "2026-10-01", idempotencyKey: randomUUID() });
+
+    const oct = await openPeriod(a, p, "2026-10-01", "2026-10-31");
+    const [d10] = await generateDrafts(a, oct);
+    await issueInvoices(a, [d10!.invoiceId!]);
+    const alloc = await withOrg(a, (tx) => tx.select().from(s.paymentAllocations).where(eq(s.paymentAllocations.invoiceId, d10!.invoiceId!)));
+    // Chỉ 200.000 trả dư được trừ vào tháng 10, không phải lấy lại 1.000.000 đã trả cho tháng 9.
+    expect(alloc.reduce((t, x) => t + x.amount, 0)).toBe(200_000);
+    const all = await withOrg(a, (tx) => tx.select().from(s.paymentAllocations));
+    const pay = all.filter((x) => x.invoiceId === d9!.invoiceId! || x.invoiceId === d10!.invoiceId!);
+    expect(pay.reduce((t, x) => t + x.amount, 0)).toBe(1_200_000);
+  });
+});
+
 describe("cô lập dữ liệu giữa hai chủ trọ", () => {
   it("chủ trọ B không đọc, không sửa được dữ liệu của A", async () => {
     const a = await newOwner("a2");

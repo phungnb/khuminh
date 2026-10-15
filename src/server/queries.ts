@@ -1,11 +1,12 @@
 // Truy vấn đọc cho giao diện. Mọi truy vấn chạy trong withOrg nên chỉ thấy dữ liệu của tổ chức.
 
 import { and, asc, desc, eq, inArray, isNull, lte, ne, sql } from "drizzle-orm";
-import { withOrg } from "@/db/client";
+import { withOrg, type Tx } from "@/db/client";
 import * as s from "@/db/schema";
 import { addDays, type IsoDate } from "@/domain/dates";
 import { paymentState, type PaymentState } from "@/domain/payments";
 import type { Actor } from "./audit";
+import { emptyMoney, type MoneySummary } from "./overview-items";
 
 export function today(): IsoDate {
   // Ngày theo giờ Việt Nam (UTC+7).
@@ -223,6 +224,48 @@ export async function invoiceDetail(actor: Actor, invoiceId: string) {
   });
 }
 
+/**
+ * Số tiền của hóa đơn đã phát hành theo cơ sở. Nguồn duy nhất cho mọi trang tổng quan,
+ * để số ở trang gộp và trang từng cơ sở không lệch nhau.
+ */
+export async function propertyMoney(tx: Tx, propertyIds: string[], t: IsoDate): Promise<Map<string, MoneySummary>> {
+  const out = new Map<string, MoneySummary>();
+  if (propertyIds.length === 0) return out;
+  const rows = (await tx.execute(sql`
+    with inv as (
+      select i.property_id, i.total, i.due_date,
+        coalesce((select sum(a.amount) from payment_allocations a where a.invoice_id = i.id), 0) as paid
+      from invoices i
+      where i.property_id in (${sql.join(propertyIds.map((id) => sql`${id}::uuid`), sql`, `)}) and i.status = 'issued'
+    )
+    select property_id,
+           coalesce(sum(total), 0)::bigint as receivable,
+           coalesce(sum(paid), 0)::bigint as collected,
+           coalesce(sum(case when due_date < ${t} then total - paid else 0 end), 0)::bigint as overdue,
+           count(*) filter (where total > paid)::int as unpaid_count,
+           count(*) filter (where total > paid and due_date < ${t})::int as overdue_count
+    from inv group by property_id
+  `)) as unknown as Array<{
+    property_id: string;
+    receivable: string;
+    collected: string;
+    overdue: string;
+    unpaid_count: number;
+    overdue_count: number;
+  }>;
+  for (const id of propertyIds) out.set(id, emptyMoney());
+  for (const r of rows) {
+    out.set(r.property_id, {
+      receivable: Number(r.receivable),
+      collected: Number(r.collected),
+      overdue: Number(r.overdue),
+      unpaidCount: Number(r.unpaid_count),
+      overdueCount: Number(r.overdue_count),
+    });
+  }
+  return out;
+}
+
 export interface Dashboard {
   units: { total: number; occupied: number; vacant: number; maintenance: number };
   receivable: number;
@@ -236,17 +279,7 @@ export async function dashboard(actor: Actor, propertyId: string): Promise<Dashb
   const t = today();
   const overview = await unitsOverview(actor, propertyId, t);
   return withOrg(actor, async (tx) => {
-    const [money] = (await tx.execute(sql`
-      with inv as (
-        select i.id, i.total, i.due_date,
-          coalesce((select sum(a.amount) from payment_allocations a where a.invoice_id = i.id), 0) as paid
-        from invoices i where i.property_id = ${propertyId} and i.status = 'issued'
-      )
-      select coalesce(sum(total), 0)::bigint as receivable,
-             coalesce(sum(paid), 0)::bigint as collected,
-             coalesce(sum(case when due_date < ${t} then total - paid else 0 end), 0)::bigint as overdue
-      from inv
-    `)) as unknown as Array<{ receivable: string; collected: string; overdue: string }>;
+    const money = (await propertyMoney(tx, [propertyId], t)).get(propertyId) ?? emptyMoney();
     const expiring = await tx
       .select({ unitCode: s.units.code, tenantName: s.tenants.fullName, expiresOn: s.leases.expiresOn })
       .from(s.leases)
@@ -262,8 +295,7 @@ export async function dashboard(actor: Actor, propertyId: string): Promise<Dashb
         ),
       )
       .orderBy(asc(s.leases.expiresOn));
-    const receivable = Number(money?.receivable ?? 0);
-    const collected = Number(money?.collected ?? 0);
+    const { receivable, collected } = money;
     return {
       units: {
         total: overview.length,
@@ -274,7 +306,7 @@ export async function dashboard(actor: Actor, propertyId: string): Promise<Dashb
       receivable,
       collected,
       outstanding: receivable - collected,
-      overdue: Number(money?.overdue ?? 0),
+      overdue: money.overdue,
       expiring: expiring.map((e) => ({ ...e, expiresOn: e.expiresOn! })),
     };
   });

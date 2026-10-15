@@ -167,6 +167,13 @@ export interface LeaseInput {
   occupants: number;
   rent: number;
   quantities?: Record<string, number>;
+  /** Ngày thu tiền hằng tháng theo thỏa thuận (1–28); trống thì dùng hạn chung của cơ sở. */
+  dueDay?: number | null;
+}
+
+function assertDueDay(day: number | null | undefined): void {
+  if (day === null || day === undefined) return;
+  if (!Number.isInteger(day) || day < 1 || day > 28) throw new UserError("Ngày thu tiền phải từ 1 đến 28");
 }
 
 export async function createLease(actor: Actor, input: LeaseInput): Promise<string> {
@@ -178,6 +185,7 @@ export async function createLease(actor: Actor, input: LeaseInput): Promise<stri
   if (input.rent <= 0) throw new UserError("Giá thuê phải lớn hơn 0");
   if (!Number.isInteger(input.occupants) || input.occupants < 1) throw new UserError("Số người ở ít nhất là 1");
   if (!input.tenant.fullName.trim()) throw new UserError("Cần nhập tên người thuê");
+  assertDueDay(input.dueDay);
 
   return withOrg(actor, async (tx) => {
     const [unit] = await tx.select().from(units).where(eq(units.id, input.unitId));
@@ -199,6 +207,7 @@ export async function createLease(actor: Actor, input: LeaseInput): Promise<stri
           expiresOn: input.expiresOn ?? null,
           deposit: input.deposit,
           occupants: input.occupants,
+          dueDay: input.dueDay ?? null,
         })
         .returning({ id: leases.id });
       leaseId = l!.id;
@@ -233,6 +242,43 @@ export async function changeRent(actor: Actor, leaseId: string, effectiveFrom: I
       .onConflictDoUpdate({ target: [leaseRents.leaseId, leaseRents.effectiveFrom], set: { amount } });
     await audit(tx, actor, "lease.change_rent", "lease", leaseId, null, { effectiveFrom, amount });
   });
+}
+
+/** Đổi ngày thu tiền theo thỏa thuận. Áp dụng cho hóa đơn lập từ nay (nháp lập lại cũng theo ngày mới). */
+export async function setLeaseDueDay(actor: Actor, leaseId: string, dueDay: number | null): Promise<void> {
+  requireOwner(actor);
+  assertDueDay(dueDay);
+  await withOrg(actor, async (tx) => {
+    const [lease] = await tx.select().from(leases).where(eq(leases.id, leaseId)).for("update");
+    if (!lease) throw new UserError("Không tìm thấy hợp đồng");
+    await tx.update(leases).set({ dueDay }).where(eq(leases.id, leaseId));
+    await audit(tx, actor, "lease.set_due_day", "lease", leaseId, { dueDay: lease.dueDay }, { dueDay });
+  });
+}
+
+/** Gia hạn hợp đồng đang ở: đổi ngày hết hạn ghi trên hợp đồng. Không đổi tiền, chỉ để nhắc. */
+export async function extendLease(actor: Actor, leaseId: string, expiresOn: IsoDate): Promise<void> {
+  requireOwner(actor);
+  assertIsoDate(expiresOn);
+  await withOrg(actor, async (tx) => {
+    const [lease] = await tx.select().from(leases).where(eq(leases.id, leaseId)).for("update");
+    if (!lease) throw new UserError("Không tìm thấy hợp đồng");
+    if (lease.status !== "active" || lease.movedOutOn) throw new UserError("Chỉ gia hạn được hợp đồng đang ở");
+    if (expiresOn <= lease.startDate) throw new UserError("Ngày hết hạn phải sau ngày vào ở");
+    await tx.update(leases).set({ expiresOn }).where(eq(leases.id, leaseId));
+    await audit(tx, actor, "lease.extend", "lease", leaseId, { expiresOn: lease.expiresOn }, { expiresOn });
+  });
+}
+
+/** Ngày hết hạn mới khi gia hạn thêm `months` tháng, tính từ hạn cũ (hoặc từ hôm nay nếu chưa có/đã quá). */
+export function extendedDate(current: IsoDate | null, months: number, on: IsoDate): IsoDate {
+  const from = current && current >= on ? current : on;
+  const [y, m, d] = from.split("-").map(Number) as [number, number, number];
+  const total = y * 12 + (m - 1) + months;
+  const ny = Math.floor(total / 12);
+  const nm = (total % 12) + 1;
+  const last = new Date(Date.UTC(ny, nm, 0)).getUTCDate();
+  return `${ny}-${String(nm).padStart(2, "0")}-${String(Math.min(d, last)).padStart(2, "0")}`;
 }
 
 export async function moveOut(actor: Actor, leaseId: string, lastDay: IsoDate): Promise<void> {

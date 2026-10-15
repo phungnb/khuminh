@@ -78,6 +78,13 @@
       "when": 1791966220994,
       "tag": "0010_admin_actions",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1792029556595,
+      "tag": "0011_deposit_settlements",
+      "breakpoints": true
     }
   ]
 }
