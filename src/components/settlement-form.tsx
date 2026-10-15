@@ -14,9 +14,12 @@ export function SettlementForm(props: {
   leaseId: string;
   deposit: number;
   settledOn: string;
+  /** Tiền bù đủ tháng gợi ý (đã làm tròn theo cơ sở). */
+  suggestedTopUp: number;
 }) {
   const [state, preview, pending] = useActionState<PreviewState, FormData>(previewSettlementAction, null);
   const [rows, setRows] = useState(1);
+  const [fullMonth, setFullMonth] = useState(false);
   const r = state?.result;
 
   return (
@@ -34,12 +37,18 @@ export function SettlementForm(props: {
         <fieldset className="space-y-1">
           <legend className="label">Tiền phòng tháng cuối</legend>
           <label className="flex items-center gap-2 text-sm">
-            <input type="radio" name="lastMonthMode" value="daily" defaultChecked /> Tính theo ngày ở (như hóa đơn cuối)
+            <input type="radio" name="lastMonthMode" value="daily" defaultChecked onChange={() => setFullMonth(false)} /> Tính theo ngày ở (như hóa đơn cuối)
           </label>
           <label className="flex items-center gap-2 text-sm">
-            <input type="radio" name="lastMonthMode" value="full_month" /> Thu đủ tháng dở
+            <input type="radio" name="lastMonthMode" value="full_month" onChange={() => setFullMonth(true)} /> Thu đủ tháng dở
           </label>
         </fieldset>
+        {fullMonth ? (
+          <div>
+            <label className="label">Tiền bù đủ tháng (gợi ý đã làm tròn, sửa được)</label>
+            <input className="input" name="topUp" inputMode="numeric" defaultValue={props.suggestedTopUp.toLocaleString("vi-VN")} />
+          </div>
+        ) : null}
         <div className="grid gap-3 md:grid-cols-2">
           <div>
             <label className="label">Ngày quyết toán</label>

@@ -17,7 +17,7 @@ import {
 } from "@/db/schema";
 import { assertIsoDate, type IsoDate } from "@/domain/dates";
 import { computeSettlement, fullMonthTopUp, SettlementError, type Deduction, type LastMonthMode, type SettlementResult } from "@/domain/deposit";
-import { assertDong } from "@/domain/money";
+import { assertDong, roundTo } from "@/domain/money";
 import { audit, requireOwner, UserError, type Actor } from "./audit";
 import { adjustInvoiceTx } from "./billing";
 import { applyLeaseCredit, insertPaymentTx, openInvoicesForLease, paymentRemainders, voidPaymentTx } from "./payments";
@@ -40,6 +40,8 @@ export interface SettlementContext {
   finalPeriodId: string | null;
   finalInvoice: { id: string; code: string; rentOnInvoice: number } | null;
   monthlyRent: number;
+  /** Tiền bù đủ tháng dở gợi ý: giá tháng − tiền phòng trên hóa đơn cuối, làm tròn theo mức của cơ sở. */
+  suggestedTopUp: number;
   /** Hóa đơn đã phát hành còn nợ. */
   openInvoices: Array<{ id: string; code: string; total: number; paid: number }>;
   unallocatedCredit: number;
@@ -50,7 +52,7 @@ const fmt = (d: IsoDate) => `${d.slice(8, 10)}/${d.slice(5, 7)}/${d.slice(0, 4)}
 
 async function loadContext(tx: Tx, actor: Actor, leaseId: string, lock: boolean): Promise<SettlementContext | null> {
   const q = tx
-    .select({ lease: leases, unitCode: units.code, block: units.block, propertyId: units.propertyId, propertyName: properties.name, tenantName: tenants.fullName })
+    .select({ lease: leases, unitCode: units.code, block: units.block, propertyId: units.propertyId, propertyName: properties.name, roundTotalTo: properties.roundTotalTo, tenantName: tenants.fullName })
     .from(leases)
     .innerJoin(units, eq(units.id, leases.unitId))
     .innerJoin(properties, eq(properties.id, units.propertyId))
@@ -136,6 +138,7 @@ async function loadContext(tx: Tx, actor: Actor, leaseId: string, lock: boolean)
     finalPeriodId,
     finalInvoice,
     monthlyRent,
+    suggestedTopUp: finalInvoice ? roundTo(fullMonthTopUp(monthlyRent, finalInvoice.rentOnInvoice), row.roundTotalTo) : 0,
     openInvoices: open
       .filter((o) => o.total > o.paid)
       .map((o) => ({ id: o.id, code: codes.find((c) => c.id === o.id)?.code ?? "", total: o.total, paid: o.paid })),
@@ -153,6 +156,8 @@ export interface SettleInput {
   leaseId: string;
   settledOn: IsoDate;
   lastMonthMode: LastMonthMode;
+  /** Tiền bù đủ tháng chủ trọ sửa tay (chỉ khi full_month); bỏ trống = số gợi ý đã làm tròn. */
+  topUp?: number | null;
   depositHeld: number;
   /** Bắt buộc khi cọc giữ khác số ghi trên hợp đồng. */
   depositHeldNote?: string | null;
@@ -167,12 +172,17 @@ function validate(input: SettleInput, ctx: SettlementContext) {
   if (input.depositHeld !== ctx.deposit && !input.depositHeldNote?.trim()) {
     throw new UserError("Cọc thực giữ khác số trên hợp đồng: cần ghi lý do");
   }
+  if (input.topUp != null) {
+    if (input.lastMonthMode !== "full_month") throw new UserError("Tiền bù chỉ dùng khi thu đủ tháng dở");
+    assertDong(input.topUp, "tiền bù tháng");
+    if (input.topUp < 0 || input.topUp > ctx.monthlyRent) throw new UserError("Tiền bù đủ tháng phải từ 0 tới giá thuê một tháng");
+  }
   if (ctx.blocker) throw new UserError(ctx.blocker);
   if (ctx.movedOutOn && input.settledOn < ctx.movedOutOn) throw new UserError("Ngày quyết toán trước ngày chuyển đi");
 }
 
 function compute(input: SettleInput, ctx: SettlementContext): SettlementResult & { topUp: number } {
-  const topUp = input.lastMonthMode === "full_month" && ctx.finalInvoice ? fullMonthTopUp(ctx.monthlyRent, ctx.finalInvoice.rentOnInvoice) : 0;
+  const topUp = input.lastMonthMode === "full_month" && ctx.finalInvoice ? (input.topUp ?? ctx.suggestedTopUp) : 0;
   try {
     const r = computeSettlement({
       depositHeld: input.depositHeld,

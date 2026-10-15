@@ -88,6 +88,7 @@ describe("quyết toán cọc", () => {
     const ctx = (await settlementContext(a, lease))!;
     expect(ctx.blocker).toBeNull();
     expect(ctx.finalInvoice?.rentOnInvoice).toBe(1_500_000);
+    expect(ctx.suggestedTopUp).toBe(1_600_000);
 
     const input = {
       leaseId: lease, settledOn: "2026-10-15", lastMonthMode: "full_month" as const, depositHeld: 3_200_000,
@@ -99,6 +100,11 @@ describe("quyết toán cọc", () => {
 
     const daily = await previewSettlement(a, { ...input, lastMonthMode: "daily" });
     expect(daily).toMatchObject({ topUp: 0, debtAfter: 1_850_000, depositApplied: 1_850_000, refundDue: 1_350_000, tenantOwes: 0 });
+
+    // Chủ trọ sửa tiền bù; ngoài 0 – giá tháng hoặc dùng khi tính theo ngày thì bị chặn.
+    expect(await previewSettlement(a, { ...input, topUp: 1_000_000 })).toMatchObject({ topUp: 1_000_000, tenantOwes: 0, refundDue: 350_000 });
+    await expect(previewSettlement(a, { ...input, topUp: 3_100_001 })).rejects.toThrow(/từ 0 tới giá thuê/);
+    await expect(previewSettlement(a, { ...input, lastMonthMode: "daily", topUp: 1 })).rejects.toThrow(/thu đủ tháng/);
 
     const id = await settleDeposit(a, input);
     expect(await owed(a, lease)).toBe(250_000);

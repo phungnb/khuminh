@@ -26,10 +26,12 @@ function settleInput(f: FormData): SettleInput {
     if (!reason) throw new UserError("Mỗi khoản khấu trừ cần ghi lý do");
     deductions.push({ reason, amount: money(f, `d_amount_${i}`, `Khoản khấu trừ "${reason}"`) });
   }
+  const lastMonthMode = str(f, "lastMonthMode") === "full_month" ? "full_month" : "daily";
   return {
     leaseId: str(f, "leaseId"),
     settledOn: str(f, "settledOn"),
-    lastMonthMode: str(f, "lastMonthMode") === "full_month" ? "full_month" : "daily",
+    lastMonthMode,
+    topUp: lastMonthMode === "full_month" && str(f, "topUp") ? money(f, "topUp", "Tiền bù đủ tháng") : null,
     depositHeld: money(f, "depositHeld", "Tiền cọc thực giữ"),
     depositHeldNote: str(f, "depositHeldNote") || null,
     deductions,

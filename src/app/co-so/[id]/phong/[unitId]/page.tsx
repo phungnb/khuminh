@@ -348,7 +348,7 @@ async function Settlement(props: { actor: Actor; propertyId: string; unitId: str
           )}
         </p>
       ) : actor.role === "owner" ? (
-        <SettlementForm propertyId={propertyId} unitId={unitId} leaseId={ctx.leaseId} deposit={ctx.deposit} settledOn={today()} />
+        <SettlementForm propertyId={propertyId} unitId={unitId} leaseId={ctx.leaseId} deposit={ctx.deposit} settledOn={today()} suggestedTopUp={ctx.suggestedTopUp} />
       ) : (
         <p className="text-sm text-fg-muted">Chủ trọ quyết toán cọc.</p>
       )}

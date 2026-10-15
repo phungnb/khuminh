@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { computeSettlement, fullMonthTopUp, type SettlementInput } from "./deposit";
+import { roundTo } from "./money";
 
 const base: SettlementInput = { depositHeld: 5_000_000, invoices: [], unallocatedCredit: 0, fullMonthTopUp: 0, deductions: [] };
 
@@ -68,6 +69,10 @@ describe("fullMonthTopUp", () => {
   it("chuyển đi ngày 15 tháng 31 ngày: bù phần 16 ngày còn lại", () => {
     // Hóa đơn theo ngày: 3.200.000 × 15/31 = 1.548.387 (domain/billing làm tròn nửa lên).
     expect(fullMonthTopUp(3_200_000, 1_548_387)).toBe(1_651_613);
+  });
+  it("gợi ý làm tròn theo mức của cơ sở (quyết định 15/10/2026)", () => {
+    // 3.600.000 × 12/31 = 1.393.548 → bù 2.206.452 → làm tròn 1.000đ: 2.206.000
+    expect(roundTo(fullMonthTopUp(3_600_000, 1_393_548), 1_000)).toBe(2_206_000);
   });
   it("đã đủ tháng thì không bù, không âm", () => {
     expect(fullMonthTopUp(3_200_000, 3_200_000)).toBe(0);
