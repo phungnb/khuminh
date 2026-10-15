@@ -22,6 +22,7 @@ import {
   openPeriod,
   recordReadings,
   setFeeRule,
+  setLeaseDueDay,
   updateProperty,
   type PropertyInput,
 } from "@/server/setup";
@@ -102,6 +103,7 @@ export async function createLeaseAction(f: FormData) {
       rent: money(f, "rent", "Giá thuê"),
       occupants: parseIntField(f.get("occupants")),
       quantities: Number.isNaN(parking) ? {} : { parking },
+      dueDay: str(f, "dueDay") ? parseIntField(f.get("dueDay")) : null,
     });
     return `/co-so/${id}/phong`;
   }, "Đã thêm hợp đồng");
@@ -122,6 +124,16 @@ export async function extendLeaseAction(f: FormData) {
     await extendLease(actor, str(f, "leaseId"), date);
     return `${back}?ok=${encodeURIComponent(`Đã gia hạn hợp đồng tới ${date.split("-").reverse().join("/")}`)}`;
   });
+}
+
+export async function setLeaseDueDayAction(f: FormData) {
+  const actor = await requireActor();
+  const back = `/co-so/${str(f, "propertyId")}/phong/${str(f, "unitId")}`;
+  await runAction(
+    back,
+    () => setLeaseDueDay(actor, str(f, "leaseId"), str(f, "dueDay") ? parseIntField(f.get("dueDay")) : null),
+    "Đã lưu ngày thu tiền. Áp dụng cho hóa đơn lập từ nay.",
+  );
 }
 
 export async function moveOutAction(f: FormData) {

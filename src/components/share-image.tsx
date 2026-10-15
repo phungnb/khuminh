@@ -7,7 +7,7 @@ import { useState } from "react";
  * Gửi ảnh hóa đơn: điện thoại mở bảng chia sẻ (chọn Zalo); máy không chia sẻ được tệp thì tải ảnh về.
  * `src` là route ảnh PNG cùng nguồn.
  */
-export function ShareImage({ src, filename, text }: { src: string; filename: string; text?: string }) {
+export function ShareImage({ src, filename, text, label = "Gửi ảnh hóa đơn (Zalo)" }: { src: string; filename: string; text?: string; label?: string }) {
   const [state, setState] = useState<"idle" | "busy" | "error">("idle");
 
   async function share() {
@@ -39,7 +39,7 @@ export function ShareImage({ src, filename, text }: { src: string; filename: str
       <div className="flex flex-wrap gap-2">
         <button type="button" className="btn" onClick={share} disabled={state === "busy"}>
           <Share2 className="size-4" />
-          {state === "busy" ? "Đang tạo ảnh..." : "Gửi ảnh hóa đơn (Zalo)"}
+          {state === "busy" ? "Đang tạo ảnh..." : label}
         </button>
         <a className="btn-secondary" href={src} download={filename}>
           <Download className="size-4" />

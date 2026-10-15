@@ -1,4 +1,4 @@
-import { AlarmClock, CalendarClock, ChevronRight, CircleAlert, CircleDollarSign, FileWarning, TriangleAlert, Wrench } from "lucide-react";
+import { AlarmClock, CalendarClock, HandCoins, KeyRound, ChevronRight, CircleAlert, CircleDollarSign, FileWarning, TriangleAlert, Wrench } from "lucide-react";
 import Link from "next/link";
 import type { IsoDate } from "@/domain/dates";
 import { vnd } from "@/lib/format";
@@ -6,6 +6,8 @@ import { actionItems, sumTotals, type ActionKind, type PropertySummary } from "@
 
 const KIND_ICON: Record<ActionKind, React.ComponentType<{ className?: string }>> = {
   unpaid: CircleDollarSign,
+  deposit_refund: HandCoins,
+  deposit_unsettled: KeyRound,
   missing_period: CalendarClock,
   period_gap: FileWarning,
   lease_expired: CircleAlert,

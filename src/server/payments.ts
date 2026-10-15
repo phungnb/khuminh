@@ -177,7 +177,12 @@ export async function recordPayment(actor: Actor, input: RecordPaymentInput): Pr
 export async function voidPayment(actor: Actor, paymentId: string, reason: string): Promise<void> {
   requireOwner(actor);
   if (!reason.trim()) throw new UserError("Cần ghi lý do hủy");
-  await withOrg(actor, (tx) => voidPaymentTx(tx, actor, paymentId, reason));
+  await withOrg(actor, async (tx) => {
+    const [p] = await tx.select({ method: payments.method }).from(payments).where(eq(payments.id, paymentId));
+    // Cấn trừ cọc gắn với bản quyết toán: hủy riêng sẽ lệch quyết toán.
+    if (p?.method === "deposit") throw new UserError("Khoản cấn trừ cọc chỉ hủy được bằng Hủy quyết toán ở trang phòng");
+    await voidPaymentTx(tx, actor, paymentId, reason);
+  });
 }
 
 /** Như voidPayment nhưng chạy trong giao dịch có sẵn. */

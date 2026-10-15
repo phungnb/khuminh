@@ -71,7 +71,7 @@ export default async function Page({
             {d.payments.map((p) => (
               <tr key={p.payment.id}>
                 <td>
-                  Đã trả {dmy(p.payment.receivedOn)} ({p.payment.method === "cash" ? "tiền mặt" : p.payment.method === "transfer" ? "chuyển khoản" : "khác"})
+                  Đã trả {dmy(p.payment.receivedOn)} ({p.payment.method === "cash" ? "tiền mặt" : p.payment.method === "transfer" ? "chuyển khoản" : p.payment.method === "deposit" ? "cấn trừ cọc" : "khác"})
                 </td>
                 <td className="text-right text-success">−{vnd(p.allocated)}</td>
               </tr>

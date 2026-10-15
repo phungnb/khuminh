@@ -5,7 +5,7 @@ import { withOrg } from "@/db/client";
 import * as s from "@/db/schema";
 import { addDays, type IsoDate } from "@/domain/dates";
 import type { Actor } from "./audit";
-import { emptyMoney, EXPIRING_WITHIN_DAYS, previousMonth, type PropertySummary } from "./overview-items";
+import { emptyMoney, EXPIRING_WITHIN_DAYS, previousMonth, SETTLE_WITHIN_DAYS, type PropertySummary } from "./overview-items";
 import { listProperties, propertyMoney, today, unitsOverview } from "./queries";
 
 /** Tổng quan mọi cơ sở người dùng được thấy (nhân viên: chỉ cơ sở được giao). */
@@ -86,6 +86,26 @@ export async function orgOverview(actor: Actor, t: IsoDate = today()): Promise<P
       )
       .orderBy(asc(s.leases.expiresOn));
 
+    // Trả phòng gần đây chưa quyết toán cọc, và quyết toán còn chờ chủ trọ hoàn tiền.
+    const deposits = (await tx.execute(sql`
+      select u.property_id, u.id as unit_id, u.code as unit_code, u.block, t.full_name as tenant_name, l.moved_out_on,
+        ds.refund_due, ds.refunded_on, ds.id as settlement_id, l.deposit
+      from leases l
+      join units u on u.id = l.unit_id
+      join tenants t on t.id = l.tenant_id
+      left join deposit_settlements ds on ds.lease_id = l.id and ds.voided_at is null
+      where u.property_id in (${sql.join(ids.map((id) => sql`${id}::uuid`), sql`, `)})
+        and l.moved_out_on is not null
+        and (
+          (ds.id is null and l.deposit > 0 and l.moved_out_on >= ${addDays(t, -SETTLE_WITHIN_DAYS)})
+          or (ds.id is not null and ds.refund_due > 0 and ds.refunded_on is null)
+        )
+      order by l.moved_out_on
+    `)) as unknown as Array<{
+      property_id: string; unit_id: string; unit_code: string; block: string | null; tenant_name: string;
+      moved_out_on: string; refund_due: string | null; settlement_id: string | null; deposit: string;
+    }>;
+
     const issues = await tx
       .select({ propertyId: s.maintenanceRequests.propertyId, n: sql<number>`count(*)::int` })
       .from(s.maintenanceRequests)
@@ -124,6 +144,16 @@ export async function orgOverview(actor: Actor, t: IsoDate = today()): Promise<P
         leasesDue: due
           .filter((d) => d.propertyId === p.id)
           .map((d) => ({ unitId: d.unitId, unitCode: d.unitCode, tenantName: d.tenantName, expiresOn: d.expiresOn! })),
+        deposits: deposits
+          .filter((d) => d.property_id === p.id)
+          .map((d) => ({
+            unitId: d.unit_id,
+            unitCode: d.block ? `${d.block}-${d.unit_code}` : d.unit_code,
+            tenantName: d.tenant_name,
+            movedOutOn: d.moved_out_on as IsoDate,
+            kind: d.settlement_id ? ("refund" as const) : ("unsettled" as const),
+            amount: Number(d.settlement_id ? d.refund_due : d.deposit),
+          })),
         openIssues: issues.find((i) => i.propertyId === p.id)?.n ?? 0,
       };
     });

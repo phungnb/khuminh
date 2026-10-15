@@ -9,7 +9,8 @@ import type { Actor } from "./audit";
 import { actorFor, signUpOwner } from "./auth";
 import { dueDateForDay, generateDrafts, issueInvoices } from "./billing";
 import { markRefunded, previewSettlement, settleDeposit, settlementContext, voidSettlement } from "./deposit";
-import { recordPayment } from "./payments";
+import { orgOverview } from "./overview";
+import { recordPayment, voidPayment } from "./payments";
 import { createLease, createProperty, importUnits, moveOut, openPeriod, recordReadings, setFeeRule, setLeaseDueDay } from "./setup";
 import { acceptStaffInvite, createStaffInvite } from "./staff";
 
@@ -70,6 +71,7 @@ describe("quyết toán cọc", () => {
     let ctx = (await settlementContext(a, lease))!;
     expect(ctx.blocker).toMatch(/chuyển đi/);
     await moveOut(a, lease, "2026-10-15");
+    expect((await orgOverview(a, "2026-10-16")).find((x) => x.id === p)!.deposits).toMatchObject([{ kind: "unsettled", amount: 3_200_000 }]);
     ctx = (await settlementContext(a, lease))!;
     expect(ctx.blocker).toMatch(/hóa đơn cuối/);
     await expect(
@@ -92,7 +94,6 @@ describe("quyết toán cọc", () => {
       deductions: [{ reason: "Vệ sinh phòng", amount: 150_000 }],
     };
     const pv = await previewSettlement(a, input);
-    console.log("DBG", JSON.stringify(pv), JSON.stringify(await settlementContext(a, lease)));
     // Nợ 1.700.000 + bù 1.600.000 + khấu trừ 150.000 = 3.450.000 > cọc 3.200.000 → khách trả thêm 250.000.
     expect(pv).toMatchObject({ debtBefore: 1_700_000, topUp: 1_600_000, debtAfter: 3_450_000, depositApplied: 3_200_000, refundDue: 0, tenantOwes: 250_000 });
 
@@ -108,6 +109,8 @@ describe("quyết toán cọc", () => {
     const [row] = await withOrg(a, (tx) => tx.select().from(s.depositSettlements).where(eq(s.depositSettlements.id, id)));
     expect(row).toMatchObject({ tenantOwes: 250_000, refundDue: 0, fullMonthTopUp: 1_600_000, lastMonthMode: "full_month" });
 
+    // Khoản cấn trừ cọc không hủy lẻ được.
+    await expect(voidPayment(a, pays[0]!.id, "x")).rejects.toThrow(/Hủy quyết toán/);
     // Không quyết toán hai lần; không hoàn khi không có tiền hoàn.
     await expect(settleDeposit(a, input)).rejects.toThrow(/đã quyết toán/);
     await expect(markRefunded(a, id, "2026-10-16", "cash")).rejects.toThrow(/không có tiền phải hoàn/);
@@ -127,7 +130,10 @@ describe("quyết toán cọc", () => {
       deductions: [{ reason: "Vệ sinh phòng", amount: 150_000 }],
     });
     expect(await owed(a, lease)).toBe(0);
+    const kinds = async () => (await orgOverview(a, "2026-10-17")).find((x) => x.id === p)!.deposits;
+    expect(await kinds()).toMatchObject([{ kind: "refund", amount: 1_350_000 }]);
     await markRefunded(a, id, "2026-10-17", "transfer");
+    expect(await kinds()).toEqual([]);
     await expect(voidSettlement(a, id, "x")).rejects.toThrow(/không hủy được/);
     const logs = await withOrg(a, (tx) => tx.select().from(s.auditLogs).where(eq(s.auditLogs.entityId, id)));
     expect(logs.map((l) => l.action)).toContain("deposit.refund");

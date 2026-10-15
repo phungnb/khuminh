@@ -41,6 +41,20 @@ export interface LeaseDue {
   expiresOn: IsoDate;
 }
 
+/** Hợp đồng đã chuyển đi trong khoảng này mà chưa quyết toán cọc thì nhắc. */
+export const SETTLE_WITHIN_DAYS = 90;
+
+export interface DepositDue {
+  unitId: string;
+  unitCode: string;
+  tenantName: string;
+  movedOutOn: IsoDate;
+  /** unsettled: chưa quyết toán; refund: đã quyết toán, chủ trọ chưa hoàn tiền. */
+  kind: "unsettled" | "refund";
+  /** Cọc giữ (unsettled) hoặc số phải hoàn (refund). */
+  amount: number;
+}
+
 export interface PropertySummary {
   id: string;
   name: string;
@@ -51,6 +65,7 @@ export interface PropertySummary {
   /** Tháng trước có người ở nhưng chưa có kỳ nào phủ ngày cuối tháng. */
   missingPeriodFor: { start: IsoDate; end: IsoDate } | null;
   leasesDue: LeaseDue[];
+  deposits: DepositDue[];
   openIssues: number;
 }
 
@@ -94,7 +109,15 @@ export function previousMonth(t: IsoDate): { start: IsoDate; end: IsoDate } {
   return { start: `${end.slice(0, 8)}01` as IsoDate, end };
 }
 
-export type ActionKind = "missing_period" | "period_gap" | "unpaid" | "lease_expired" | "lease_expiring" | "issues";
+export type ActionKind =
+  | "missing_period"
+  | "period_gap"
+  | "unpaid"
+  | "deposit_refund"
+  | "deposit_unsettled"
+  | "lease_expired"
+  | "lease_expiring"
+  | "issues";
 
 export interface ActionItem {
   kind: ActionKind;
@@ -122,11 +145,13 @@ function dm(d: IsoDate): string {
 
 const ORDER: Record<ActionKind, number> = {
   unpaid: 0,
-  missing_period: 1,
-  period_gap: 2,
-  lease_expired: 3,
-  issues: 4,
-  lease_expiring: 5,
+  deposit_refund: 1,
+  deposit_unsettled: 2,
+  missing_period: 3,
+  period_gap: 4,
+  lease_expired: 5,
+  issues: 6,
+  lease_expiring: 7,
 };
 
 /** Các việc chủ trọ cần làm, việc dính tiền lên trước. `vnd` truyền vào để giữ hàm thuần. */
@@ -143,6 +168,16 @@ export function actionItems(props: PropertySummary[], t: IsoDate, vnd: (n: numbe
         detail: p.money.overdueCount > 0 ? `${p.money.overdueCount} hóa đơn quá hạn · ${vnd(p.money.overdue)}` : "Chưa có hóa đơn quá hạn",
         href: `/co-so/${p.id}/ky`,
         tone: p.money.overdueCount > 0 ? "danger" : "warning",
+      });
+    }
+    for (const d of p.deposits) {
+      out.push({
+        ...base,
+        kind: d.kind === "refund" ? "deposit_refund" : "deposit_unsettled",
+        title: d.kind === "refund" ? `Chờ hoàn cọc phòng ${d.unitCode} · ${vnd(d.amount)}` : `Phòng ${d.unitCode} đã trả, chưa quyết toán cọc`,
+        detail: `${d.tenantName} · chuyển đi ${dm(d.movedOutOn)}${d.kind === "unsettled" ? ` · cọc ${vnd(d.amount)}` : ""}`,
+        href: `/co-so/${p.id}/phong/${d.unitId}`,
+        tone: d.kind === "refund" ? "danger" : "warning",
       });
     }
     if (p.missingPeriodFor) {

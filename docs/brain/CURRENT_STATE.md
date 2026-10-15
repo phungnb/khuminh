@@ -54,6 +54,10 @@ Cập nhật: 2026-10-15, KM-QLA (việc tháng của chủ trọ, PR chờ duy�
   và /hd/[token]/anh; nút "Gửi ảnh hóa đơn (Zalo)" dùng Web Share API, máy không hỗ trợ thì tải ảnh.
   Gia hạn hợp đồng +6/+12 tháng/chọn ngày (extendLease, audit lease.extend, chỉ owner); danh sách phòng có nhãn đã/sắp hết hạn.
 - KM-COC (hoàn cọc): đặc tả v1.1 khuminh/KM-COC_dac-ta-v1.1.md, cổng HIGH (tiền + migration), chờ `APPROVED: KM-COC plan v1.1`.
+  Code xong trên nhánh cục bộ km-coc, CHƯA đẩy [CONFIRMED test cục bộ]: migration 0011 (deposit_settlements + leases.due_day, RLS bật),
+  src/domain/deposit.ts, src/server/deposit.ts (quyết toán/hoàn/hủy một giao dịch), thẻ trả phòng ở trang phòng (xem trước → xác nhận),
+  phiếu ảnh quyet-toan/anh, ngày thu theo hợp đồng, nhắc "chưa quyết toán"/"chờ hoàn cọc" ở tổng quan.
+  Khoản cấn trừ cọc (payments.method=deposit) chỉ hủy được qua Hủy quyết toán.
 - CHƯA có: giới hạn đăng nhập sai (anh quyết chưa làm), gửi email/OTP, giám sát lỗi, xác nhận sao lưu.
 
 ## Môi trường

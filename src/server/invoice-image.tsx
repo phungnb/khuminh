@@ -12,7 +12,7 @@ const WIDTH = 720;
 const FONT_DIR = path.join(process.cwd(), "src/assets/fonts");
 
 let fonts: Promise<Array<{ name: string; data: Buffer; weight: 400 | 700; style: "normal" }>> | null = null;
-function loadFonts() {
+export function loadFonts() {
   fonts ??= Promise.all([
     readFile(path.join(FONT_DIR, "BeVietnamPro-Regular.ttf")).then((data) => ({ name: "Be Vietnam Pro", data, weight: 400 as const, style: "normal" as const })),
     readFile(path.join(FONT_DIR, "BeVietnamPro-Bold.ttf")).then((data) => ({ name: "Be Vietnam Pro", data, weight: 700 as const, style: "normal" as const })),
@@ -20,13 +20,13 @@ function loadFonts() {
   return fonts;
 }
 
-const INK = "#0f172a";
-const MUTED = "#64748b";
+export const INK = "#0f172a";
+export const MUTED = "#64748b";
 const LINE = "#e2e8f0";
-const BRAND = "#b6ff3b";
-const BRAND_INK = "#1f3d00";
+export const BRAND = "#b6ff3b";
+export const BRAND_INK = "#1f3d00";
 
-function Row({ label, value, bold, color }: { label: string; value: string; bold?: boolean; color?: string }) {
+export function Row({ label, value, bold, color }: { label: string; value: string; bold?: boolean; color?: string }) {
   return (
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16, padding: "12px 0", borderBottom: `1px solid ${LINE}`, fontWeight: bold ? 700 : 400, color: color ?? INK }}>
       <div style={{ display: "flex", maxWidth: 470 }}>{label}</div>

@@ -9,6 +9,7 @@ const config: NextConfig = {
   outputFileTracingIncludes: {
     "/hd/[token]/anh": FONT_FILES,
     "/co-so/[id]/hoa-don/[invoiceId]/anh": FONT_FILES,
+    "/co-so/[id]/phong/[unitId]/quyet-toan/anh": FONT_FILES,
   },
 };
 

@@ -12,6 +12,7 @@ function prop(over: Partial<PropertySummary> = {}): PropertySummary {
     periodGaps: [],
     missingPeriodFor: null,
     leasesDue: [],
+    deposits: [],
     openIssues: 0,
     ...over,
   };
@@ -70,6 +71,25 @@ describe("actionItems", () => {
     expect(items[3]).toMatchObject({ title: "Hợp đồng phòng 102 đã hết hạn", href: "/co-so/p1/phong/u2" });
     // 103 hết hạn sau 30 ngày: không nhắc.
     expect(items.filter((i) => i.kind === "lease_expiring")).toHaveLength(1);
+  });
+
+  it("cọc: chờ hoàn tô đỏ, chưa quyết toán sau nợ hóa đơn", () => {
+    const items = actionItems(
+      [
+        prop({
+          money: { receivable: 100, collected: 0, overdue: 0, unpaidCount: 1, overdueCount: 0 },
+          deposits: [
+            { unitId: "u1", unitCode: "101", tenantName: "An", movedOutOn: "2026-10-01", kind: "unsettled", amount: 3_000_000 },
+            { unitId: "u2", unitCode: "102", tenantName: "Bảo", movedOutOn: "2026-09-30", kind: "refund", amount: 1_350_000 },
+          ],
+        }),
+      ],
+      "2026-10-15",
+      vnd,
+    );
+    expect(items.map((i) => i.kind)).toEqual(["unpaid", "deposit_refund", "deposit_unsettled"]);
+    expect(items[1]).toMatchObject({ title: "Chờ hoàn cọc phòng 102 · 1350000đ", tone: "danger", href: "/co-so/p1/phong/u2" });
+    expect(items[2]!.detail).toBe("An · chuyển đi 01/10/2026 · cọc 3000000đ");
   });
 
   it("nhiều phòng thì rút gọn danh sách mã", () => {
