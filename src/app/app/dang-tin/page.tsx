@@ -1,6 +1,7 @@
 import { Gift, HandCoins, MapPinOff, Search, ShieldCheck, Wrench, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { CategoryTile } from "@/components/category";
+import { ListingPhotoPicker } from "@/components/listing-photo-picker";
 import { BackLink, EmptyState, Flash, PageTitle } from "@/components/ui";
 import { requireUser } from "@/lib/session";
 import { CATEGORIES, LISTING_KIND_LABEL, marketPlaces, type ListingKind } from "@/server/market";
@@ -59,6 +60,10 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ l
             })}
           </div>
         </fieldset>
+        <div>
+          <span className="label">Ảnh sản phẩm (không bắt buộc)</span>
+          <ListingPhotoPicker />
+        </div>
         <div>
           <label className="label" htmlFor="title">Tiêu đề</label>
           <input className="input" id="title" name="title" maxLength={120} required placeholder="Quạt đứng Senko còn tốt" />
