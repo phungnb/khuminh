@@ -4,9 +4,25 @@ import { runAction } from "@/lib/action";
 import { parseMoney } from "@/lib/format";
 import { requireUser } from "@/lib/session";
 import { UserError } from "@/server/audit";
-import { closeListing, createListing, decideInterest, expressInterest, reportListing, type ListingKind } from "@/server/market";
+import {
+  closeListing,
+  createListing,
+  decideInterest,
+  deleteListing,
+  expressInterest,
+  renewListing,
+  reopenListing,
+  reportListing,
+  type ListingKind,
+} from "@/server/market";
 
 const str = (f: FormData, k: string) => String(f.get(k) ?? "").trim();
+
+/** Trang quay về sau thao tác vòng đời tin; chỉ nhận đường nội bộ dưới /app để tránh nhảy trang lạ. */
+const back = (f: FormData, fallback: string) => {
+  const b = str(f, "back");
+  return b.startsWith("/app/") ? b : fallback;
+};
 
 export async function createListingAction(f: FormData) {
   const user = await requireUser();
@@ -47,7 +63,25 @@ export async function decideInterestAction(f: FormData) {
 export async function closeListingAction(f: FormData) {
   const user = await requireUser();
   const id = str(f, "listingId");
-  await runAction(`/app/tin/${id}`, () => closeListing(user.id, id), "Đã đóng tin");
+  await runAction(back(f, `/app/tin/${id}`), () => closeListing(user.id, id), "Đã đóng tin");
+}
+
+export async function renewListingAction(f: FormData) {
+  const user = await requireUser();
+  const id = str(f, "listingId");
+  await runAction(back(f, "/app/cua-toi"), () => renewListing(user.id, id), "Đã gia hạn thêm 30 ngày");
+}
+
+export async function reopenListingAction(f: FormData) {
+  const user = await requireUser();
+  const id = str(f, "listingId");
+  await runAction(back(f, "/app/cua-toi"), () => reopenListing(user.id, id), "Đã mở lại tin, hạn hiển thị tính lại 30 ngày");
+}
+
+export async function deleteListingAction(f: FormData) {
+  const user = await requireUser();
+  const id = str(f, "listingId");
+  await runAction(back(f, "/app/cua-toi"), () => deleteListing(user.id, id), "Đã xoá hẳn tin");
 }
 
 export async function reportListingAction(f: FormData) {

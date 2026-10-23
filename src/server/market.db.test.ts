@@ -11,13 +11,17 @@ import {
   closeListing,
   createListing,
   decideInterest,
+  deleteListing,
   expressInterest,
   getListing,
   marketPlaces,
   myInterests,
   myListings,
+  renewListing,
+  reopenListing,
   reportListing,
   searchListings,
+  sellerShop,
   setPropertyLocation,
 } from "./market";
 import { setPushSenderForTests, type PushMessage } from "./push";
@@ -167,11 +171,16 @@ describe("chợ quanh đây", () => {
     await expect(withUser(tB, (tx) => tx.insert(s.listingContacts).values({ listingId: id, contact: "lừa đảo" }))).rejects.toThrow();
     // Không đăng nhập (không có app.user_id) thì không thấy gì.
     expect(await getDb().select().from(s.listings)).toEqual([]);
-    // Người đăng không xóa được tin (không có policy DELETE).
-    expect(await withUser(tA, (tx) => tx.delete(s.listings).where(eq(s.listings.id, id)).returning())).toEqual([]);
+    // Người khác xoá tin không được (policy DELETE chỉ cho tác giả).
+    expect(await withUser(tB, (tx) => tx.delete(s.listings).where(eq(s.listings.id, id)).returning())).toEqual([]);
+    await expect(deleteListing(tB, id)).rejects.toThrow(/không có quyền/);
     await closeListing(tA, id);
     await expect(expressInterest(tB, id, "0988777666")).rejects.toThrow(/đã đóng/);
     expect((await myListings(tA)).find((l) => l.id === id)!.status).toBe("closed");
+    // Người đăng xoá hẳn được tin của mình.
+    await deleteListing(tA, id);
+    expect(await getListing(tA, id, null)).toBeNull();
+    expect((await myListings(tA)).find((l) => l.id === id)).toBeUndefined();
   });
 
   it("3 báo cáo thì tin bị ẩn; người đăng không tự gỡ ẩn", async () => {
@@ -189,5 +198,50 @@ describe("chợ quanh đây", () => {
     // Báo cáo của người khác không đọc được.
     expect((await withUser(tB, (tx) => tx.select().from(s.listingReports))).length).toBe(1);
     expect(await withUser(tA, (tx) => tx.select({ n: sql<number>`count(*)` }).from(s.listingReports))).toEqual([{ n: "0" }]);
+  });
+
+  it("vòng đời tin: hết hạn thì khuất khỏi chợ, gia hạn và mở lại được", async () => {
+    const centerA = { lat: 10.7731, lng: 106.6991 };
+    const id = await createListing(tA, { kind: "sell", category: "Đồ gia dụng", title: "Bàn học gấp", price: 90_000, contact: "0909000444", placeKey: keyA });
+    const mine0 = (await myListings(tA)).find((l) => l.id === id)!;
+    expect(mine0.expired).toBe(false);
+    const ttlMs = mine0.expiresAt.getTime() - mine0.createdAt.getTime();
+    expect(ttlMs).toBeGreaterThan(29 * 24 * 3600 * 1000);
+    expect(ttlMs).toBeLessThan(31 * 24 * 3600 * 1000);
+    expect((await searchListings(tB, centerA, 20)).map((l) => l.id)).toContain(id);
+    // Còn hạn dài thì chưa cho gia hạn.
+    await expect(renewListing(tA, id)).rejects.toThrow(/chưa cần gia hạn/);
+    // Ép hết hạn: tin biến khỏi chợ nhưng người đăng vẫn thấy ở trạng thái hết hạn.
+    await withUser(tA, (tx) => tx.update(s.listings).set({ expiresAt: new Date(Date.now() - 3600 * 1000) }).where(eq(s.listings.id, id)));
+    expect((await searchListings(tB, centerA, 20)).map((l) => l.id)).not.toContain(id);
+    expect((await myListings(tA)).find((l) => l.id === id)!.expired).toBe(true);
+    await expect(renewListing(tB, id)).rejects.toThrow(/không có quyền/);
+    await renewListing(tA, id);
+    expect((await myListings(tA)).find((l) => l.id === id)!.expired).toBe(false);
+    expect((await searchListings(tB, centerA, 20)).map((l) => l.id)).toContain(id);
+    // Đóng rồi thì gia hạn bị từ chối; mở lại thì hạn tính lại 30 ngày.
+    await closeListing(tA, id);
+    await expect(renewListing(tA, id)).rejects.toThrow(/đã đóng/);
+    await reopenListing(tA, id);
+    const re = (await myListings(tA)).find((l) => l.id === id)!;
+    expect(re.status).toBe("open");
+    expect(re.expired).toBe(false);
+  });
+
+  it("gian hàng: đang bán, đã bán gần đây, ngoài bán kính thì trống", async () => {
+    const centerA = { lat: 10.7731, lng: 106.6991 };
+    const openId = await createListing(tA2, { kind: "sell", category: "Khác", title: "Ghế nhựa", price: 50_000, contact: "0909000555", placeKey: keyA });
+    const soldId = await createListing(tA2, { kind: "sell", category: "Khác", title: "Ấm siêu tốc", price: 70_000, contact: "0909000555", placeKey: keyA });
+    await closeListing(tA2, soldId);
+    const shop = (await sellerShop(tB, tA2, centerA, 20))!;
+    expect(shop.name).toBe("Ánh");
+    expect(shop.open.map((l) => l.id)).toContain(openId);
+    expect(shop.open.map((l) => l.id)).not.toContain(soldId);
+    expect(shop.sold.map((l) => l.id)).toContain(soldId);
+    expect(shop.soldCount).toBeGreaterThanOrEqual(1);
+    const far = (await sellerShop(tB, tA2, { lat: 21.03, lng: 105.85 }, 20))!;
+    expect(far.open).toEqual([]);
+    expect(far.soldCount).toBe(0);
+    expect(await sellerShop(tB, randomUUID(), centerA, 20)).toBeNull();
   });
 });
