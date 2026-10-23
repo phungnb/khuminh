@@ -103,7 +103,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ l
         </div>
         <p className="flex items-start gap-2 rounded-xl bg-surface-2 p-3 text-xs text-fg-muted">
           <ShieldCheck className="size-4 shrink-0 text-brand" />
-          Liên hệ chỉ hiện cho người bạn đồng ý. Tin hiện vị trí gần đúng theo khu (khoảng 500 m), không hiện số phòng.
+          Liên hệ chỉ hiện cho người bạn đồng ý. Tin hiện vị trí gần đúng theo khu (khoảng 500 m), không hiện số phòng. Tin hiển thị 30 ngày; sắp hết hạn thì vào “Chợ của tôi” bấm Gia hạn, bán xong thì bấm Đóng tin.
         </p>
         <button className="btn w-full">Đăng tin</button>
       </form>

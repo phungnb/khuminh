@@ -8,7 +8,7 @@ import { Flash } from "@/components/ui";
 import { formatKm } from "@/lib/geo";
 import { requireUser } from "@/lib/session";
 import { getListing, marketPlaces } from "@/server/market";
-import { closeListingAction, decideInterestAction, interestAction, reportListingAction } from "../../market-actions";
+import { closeListingAction, decideInterestAction, interestAction, renewListingAction, reportListingAction } from "../../market-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -59,6 +59,14 @@ export default async function Page({
             {l.distanceKm !== null ? `${formatKm(l.distanceKm)} · ` : ""}gần {l.areaLabel}
           </li>
           <li className="flex items-center gap-2"><Clock className="size-4" aria-hidden />{ago(l.createdAt)}</li>
+          {l.status === "open" ? (
+            <li className="flex items-center gap-2">
+              <Clock className="size-4" aria-hidden />
+              {l.expired
+                ? "Đã hết hạn hiển thị ở chợ"
+                : `Hiển thị đến ${l.expiresAt.toLocaleDateString("vi-VN")}`}
+            </li>
+          ) : null}
         </ul>
         {l.body ? <p className="card mt-4 text-sm leading-relaxed whitespace-pre-line">{l.body}</p> : null}
         <div className="card mt-3 flex items-center gap-3">
@@ -80,12 +88,24 @@ export default async function Page({
           <div className="flex items-center justify-between">
             <h2 className="font-semibold">Người quan tâm ({l.interests.length})</h2>
             {l.status === "open" ? (
-              <form action={closeListingAction}>
-                {hidden}
-                <button className="btn-secondary">Đóng tin</button>
-              </form>
+              <div className="flex gap-2">
+                {l.expired || l.expiresAt.getTime() <= Date.now() + 3 * 24 * 3600 * 1000 ? (
+                  <form action={renewListingAction}>
+                    {hidden}
+                    <input type="hidden" name="back" value={`/app/tin/${l.id}`} />
+                    <button className="btn">Gia hạn 30 ngày</button>
+                  </form>
+                ) : null}
+                <form action={closeListingAction}>
+                  {hidden}
+                  <button className="btn-secondary">Đóng tin</button>
+                </form>
+              </div>
             ) : null}
           </div>
+          {l.expired ? (
+            <p className="text-sm font-semibold text-danger">Tin đã hết hạn nên không còn hiện ở chợ. Gia hạn để hiện lại.</p>
+          ) : null}
           {l.interests.length === 0 ? <p className="text-sm text-fg-muted">Chưa có ai.</p> : null}
           {l.interests.map((i) => (
             <div key={i.id} className="rounded-lg border border-border p-3 text-sm">
@@ -126,6 +146,8 @@ export default async function Page({
               </a>
             ) : l.myInterest ? (
               <p className="text-sm text-fg-muted">Bạn đã quan tâm · {INTEREST_LABEL[l.myInterest.status]}.</p>
+            ) : l.status === "open" && l.expired ? (
+              <p className="text-sm text-fg-muted">Tin đã hết hạn hiển thị.</p>
             ) : l.status === "open" ? (
               <form action={interestAction} className="space-y-3">
                 {hidden}

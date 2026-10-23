@@ -48,6 +48,18 @@ export const CATEGORIES = [
   "Khác",
 ] as const;
 
+/** Số ngày một tin được hiển thị ở chợ, tính từ lúc đăng, gia hạn hoặc mở lại. */
+export const LISTING_TTL_DAYS = 30;
+
+/** Chỉ gia hạn khi tin đã hết hạn hoặc còn tối đa ngần này ngày. */
+export const RENEW_WINDOW_DAYS = 3;
+
+const DAY_MS = 24 * 3600 * 1000;
+
+function ttlFromNow(): Date {
+  return new Date(Date.now() + LISTING_TTL_DAYS * DAY_MS);
+}
+
 /** Nơi người dùng gắn với (đang thuê hoặc quản lý) — làm tâm chợ và vị trí tin đăng. */
 export interface Place {
   key: string;
@@ -147,6 +159,10 @@ export interface ListingRow {
   areaLabel: string;
   status: "open" | "closed";
   hidden: boolean;
+  /** Thời điểm tin hết hạn hiển thị ở chợ. */
+  expiresAt: Date;
+  /** Đang mở nhưng đã qua hạn: không còn hiện ở chợ, người đăng gia hạn để hiện lại. */
+  expired: boolean;
   createdAt: Date;
   authorName: string;
   /** Để mở trang "tin của người này". */
@@ -168,6 +184,7 @@ const listingCols = {
   areaLabel: listings.areaLabel,
   status: listings.status,
   hiddenAt: listings.hiddenAt,
+  expiresAt: listings.expiresAt,
   createdAt: listings.createdAt,
   authorUserId: listings.authorUserId,
   authorName: users.displayName,
@@ -186,6 +203,7 @@ interface RawListing {
   areaLabel: string;
   status: "open" | "closed";
   hiddenAt: Date | null;
+  expiresAt: Date;
   createdAt: Date;
   authorUserId: string;
   authorName: string;
@@ -203,6 +221,8 @@ function toRow(r: RawListing, userId: string, center: LatLng | null): ListingRow
     areaLabel: r.areaLabel,
     status: r.status,
     hidden: r.hiddenAt !== null,
+    expiresAt: r.expiresAt,
+    expired: r.status === "open" && r.expiresAt.getTime() <= Date.now(),
     createdAt: r.createdAt,
     authorName: r.authorName,
     authorId: r.authorUserId,
@@ -244,6 +264,7 @@ export async function searchListings(
         and(
           eq(listings.status, "open"),
           isNull(listings.hiddenAt),
+          sql`${listings.expiresAt} > now()`,
           gte(listings.lat, b.minLat),
           lte(listings.lat, b.maxLat),
           gte(listings.lng, b.minLng),
@@ -308,6 +329,7 @@ export async function createListing(userId: string, input: ListingInput): Promis
         lat: loc.lat,
         lng: loc.lng,
         areaLabel: place.name,
+        expiresAt: ttlFromNow(),
       })
       .returning({ id: listings.id });
     await tx.insert(listingContacts).values({ listingId: l!.id, contact: input.contact.trim() });
@@ -436,6 +458,58 @@ export async function closeListing(userId: string, listingId: string): Promise<v
   });
 }
 
+/** Đọc tin của chính người đăng để kiểm tra trạng thái vòng đời trước khi đổi. */
+async function ownListing(userId: string, listingId: string) {
+  const [l] = await withUser(userId, (tx) =>
+    tx
+      .select({ status: listings.status, hiddenAt: listings.hiddenAt, expiresAt: listings.expiresAt })
+      .from(listings)
+      .where(and(eq(listings.id, listingId), eq(listings.authorUserId, userId))),
+  );
+  if (!l) throw new ForbiddenError();
+  return l;
+}
+
+/** Gia hạn hiển thị thêm 30 ngày. Chỉ khi tin đang mở và đã hết hạn hoặc sắp hết hạn. */
+export async function renewListing(userId: string, listingId: string): Promise<void> {
+  const l = await ownListing(userId, listingId);
+  if (l.hiddenAt) throw new UserError("Tin đang bị ẩn do báo cáo, không gia hạn được");
+  if (l.status !== "open") throw new UserError("Tin đã đóng. Mở lại tin để đăng tiếp.");
+  if (l.expiresAt.getTime() > Date.now() + RENEW_WINDOW_DAYS * DAY_MS) {
+    throw new UserError(`Tin còn hạn trên ${RENEW_WINDOW_DAYS} ngày, chưa cần gia hạn`);
+  }
+  await withUser(userId, (tx) =>
+    tx
+      .update(listings)
+      .set({ expiresAt: ttlFromNow() })
+      .where(and(eq(listings.id, listingId), eq(listings.authorUserId, userId))),
+  );
+}
+
+/** Mở lại tin đã đóng: trạng thái mở và hạn hiển thị tính lại 30 ngày. */
+export async function reopenListing(userId: string, listingId: string): Promise<void> {
+  const l = await ownListing(userId, listingId);
+  if (l.hiddenAt) throw new UserError("Tin đang bị ẩn do báo cáo, không mở lại được");
+  if (l.status !== "closed") throw new UserError("Tin chưa đóng");
+  await withUser(userId, (tx) =>
+    tx
+      .update(listings)
+      .set({ status: "open", expiresAt: ttlFromNow() })
+      .where(and(eq(listings.id, listingId), eq(listings.authorUserId, userId))),
+  );
+}
+
+/** Xoá hẳn tin của mình (liên hệ, lượt quan tâm, báo cáo xoá theo cascade). */
+export async function deleteListing(userId: string, listingId: string): Promise<void> {
+  await withUser(userId, async (tx) => {
+    const r = await tx
+      .delete(listings)
+      .where(and(eq(listings.id, listingId), eq(listings.authorUserId, userId)))
+      .returning({ id: listings.id });
+    if (r.length === 0) throw new ForbiddenError();
+  });
+}
+
 export async function reportListing(userId: string, listingId: string, reason: string): Promise<void> {
   const r = reason.trim();
   if (r.length < 3 || r.length > 300) throw new UserError("Cần ghi lý do báo cáo (3–300 ký tự)");
@@ -460,6 +534,64 @@ export async function myListings(userId: string): Promise<ListingRow[]> {
       .orderBy(desc(listings.createdAt)),
   )) as RawListing[];
   return rows.map((r) => toRow(r, userId, null));
+}
+
+// ---------- Gian hàng (trang của một người đăng) ----------
+
+export interface SellerShop {
+  name: string;
+  /** Ngày tạo tài khoản người bán. */
+  memberSince: Date;
+  /** Khu vực của tin gần nhất, để ghi "người bán quanh …". */
+  areaLabel: string | null;
+  /** Tin đang mở còn hạn trong bán kính của người xem, mới nhất trước. */
+  open: ListingRow[];
+  /** Tin đã đóng trong bán kính của người xem, mới nhất trước (tối đa 8). */
+  sold: ListingRow[];
+  /** Tổng số tin đã đóng trong bán kính (đếm đủ, không chỉ phần đã lấy). */
+  soldCount: number;
+}
+
+/**
+ * Gian hàng của một người đăng, trong phạm vi người xem vốn đã thấy ở Quanh đây.
+ * Mọi thứ đều giới hạn trong bán kính quanh khu của người xem như trang cũ,
+ * để không lộ hoạt động của người bán ở khu khác.
+ */
+export async function sellerShop(userId: string, sellerId: string, center: LatLng, radiusKm: number): Promise<SellerShop | null> {
+  const [u] = await withUser(userId, (tx) =>
+    tx.select({ name: users.displayName, createdAt: users.createdAt }).from(users).where(eq(users.id, sellerId)),
+  );
+  if (!u) return null;
+  const open = await searchListings(userId, center, radiusKm, { authorId: sellerId }, 50);
+  const b = boundingBox(center, radiusKm);
+  const soldRows = (await withUser(userId, (tx) =>
+    tx
+      .select(listingCols)
+      .from(listings)
+      .innerJoin(users, eq(users.id, listings.authorUserId))
+      .where(
+        and(
+          eq(listings.authorUserId, sellerId),
+          eq(listings.status, "closed"),
+          isNull(listings.hiddenAt),
+          gte(listings.lat, b.minLat),
+          lte(listings.lat, b.maxLat),
+          gte(listings.lng, b.minLng),
+          lte(listings.lng, b.maxLng),
+        ),
+      )
+      .orderBy(desc(listings.createdAt))
+      .limit(50),
+  )) as RawListing[];
+  const soldAll = soldRows.map((r) => toRow(r, userId, center)).filter((r) => r.distanceKm! <= radiusKm);
+  return {
+    name: u.name,
+    memberSince: u.createdAt,
+    areaLabel: open[0]?.areaLabel ?? soldAll[0]?.areaLabel ?? null,
+    open,
+    sold: soldAll.slice(0, 8),
+    soldCount: soldAll.length,
+  };
 }
 
 export async function myInterests(userId: string): Promise<Array<{ listing: ListingRow; status: InterestRow["status"] }>> {

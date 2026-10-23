@@ -554,6 +554,10 @@ export const listings = pgTable(
     status: listingStatus("status").notNull().default("open"),
     /** Ẩn tự động khi đủ báo cáo vi phạm (trigger), chỉ người đăng còn thấy. */
     hiddenAt: timestamp("hidden_at", { withTimezone: true }),
+    /** Hết hạn hiển thị ở chợ. Đăng mới, gia hạn và mở lại đều đặt lại từ lúc đó + 30 ngày. */
+    expiresAt: timestamp("expires_at", { withTimezone: true })
+      .notNull()
+      .default(sql`now() + interval '30 days'`),
     createdAt: createdAt(),
   },
   (t) => [index("listings_geo").on(t.lat, t.lng), index("listings_author").on(t.authorUserId)],

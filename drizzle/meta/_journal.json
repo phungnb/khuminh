@@ -85,6 +85,13 @@
       "when": 1792029556595,
       "tag": "0011_deposit_settlements",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1792719287704,
+      "tag": "0012_listing_lifecycle",
+      "breakpoints": true
     }
   ]
 }
