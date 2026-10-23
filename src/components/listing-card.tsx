@@ -41,7 +41,12 @@ export function ListingCard({ l, query = "" }: { l: ListingRow; query?: string }
       className={`group block overflow-hidden rounded-[var(--radius-card)] border border-border bg-surface transition hover:border-fg-subtle ${dim ? "opacity-60" : ""}`}
     >
       <div className="relative">
-        <CategoryTile category={l.category} className="aspect-[4/3] w-full" />
+        {l.coverImageId ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={`/api/img/${l.coverImageId}`} alt="" loading="lazy" className="aspect-[4/3] w-full object-cover" />
+        ) : (
+          <CategoryTile category={l.category} className="aspect-[4/3] w-full" />
+        )}
         <KindBadge kind={l.kind} className="absolute top-2 left-2" />
         {l.status === "closed" ? (
           <span className="absolute top-2 right-2 rounded-full bg-black/60 px-2 py-0.5 text-[11px] font-semibold text-white">Đã đóng</span>

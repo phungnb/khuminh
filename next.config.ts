@@ -6,6 +6,10 @@ const FONT_FILES = ["./src/assets/fonts/*.ttf"];
 const config: NextConfig = {
   serverExternalPackages: ["postgres"],
   poweredByHeader: false,
+  experimental: {
+    // Form đăng tin gửi kèm tối đa 6 ảnh đã nén (data URL) trong cùng server action.
+    serverActions: { bodySizeLimit: "10mb" },
+  },
   outputFileTracingIncludes: {
     "/hd/[token]/anh": FONT_FILES,
     "/co-so/[id]/hoa-don/[invoiceId]/anh": FONT_FILES,

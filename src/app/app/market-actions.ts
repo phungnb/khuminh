@@ -5,18 +5,39 @@ import { parseMoney } from "@/lib/format";
 import { requireUser } from "@/lib/session";
 import { UserError } from "@/server/audit";
 import {
+  addListingPhotos,
   closeListing,
   createListing,
   decideInterest,
   deleteListing,
   expressInterest,
+  removeListingPhoto,
   renewListing,
   reopenListing,
   reportListing,
   type ListingKind,
+  type PhotoInput,
 } from "@/server/market";
 
 const str = (f: FormData, k: string) => String(f.get(k) ?? "").trim();
+
+/** Ảnh từ ô ẩn "photos": JSON các data URL do ListingPhotoPicker đã nén phía client. */
+function photosFrom(f: FormData): PhotoInput[] {
+  const raw = str(f, "photos");
+  if (!raw) return [];
+  let arr: unknown;
+  try {
+    arr = JSON.parse(raw);
+  } catch {
+    throw new UserError("Ảnh không hợp lệ");
+  }
+  if (!Array.isArray(arr)) throw new UserError("Ảnh không hợp lệ");
+  return arr.map((d) => {
+    const m = /^data:(image\/(?:jpeg|png|webp));base64,(.+)$/.exec(String(d));
+    if (!m) throw new UserError("Ảnh không hợp lệ");
+    return { contentType: m[1]!, data: new Uint8Array(Buffer.from(m[2]!, "base64")) };
+  });
+}
 
 /** Trang quay về sau thao tác vòng đời tin; chỉ nhận đường nội bộ dưới /app để tránh nhảy trang lạ. */
 const back = (f: FormData, fallback: string) => {
@@ -41,6 +62,7 @@ export async function createListingAction(f: FormData) {
       price,
       contact: str(f, "contact"),
       placeKey: str(f, "place"),
+      photos: photosFrom(f),
     });
     return `/app/tin/${id}`;
   }, "Đã đăng tin");
@@ -82,6 +104,18 @@ export async function deleteListingAction(f: FormData) {
   const user = await requireUser();
   const id = str(f, "listingId");
   await runAction(back(f, "/app/cua-toi"), () => deleteListing(user.id, id), "Đã xoá hẳn tin");
+}
+
+export async function addPhotosAction(f: FormData) {
+  const user = await requireUser();
+  const id = str(f, "listingId");
+  await runAction(back(f, `/app/tin/${id}`), () => addListingPhotos(user.id, id, photosFrom(f)), "Đã thêm ảnh");
+}
+
+export async function removePhotoAction(f: FormData) {
+  const user = await requireUser();
+  const id = str(f, "listingId");
+  await runAction(back(f, `/app/tin/${id}`), () => removeListingPhoto(user.id, id, str(f, "imageId")), "Đã xoá ảnh");
 }
 
 export async function reportListingAction(f: FormData) {

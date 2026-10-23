@@ -5,6 +5,7 @@ import { sql } from "drizzle-orm";
 import {
   bigint,
   boolean,
+  customType,
   date,
   doublePrecision,
   index,
@@ -22,6 +23,10 @@ const id = () => uuid("id").primaryKey().default(sql`gen_random_uuid()`);
 const orgId = () => uuid("org_id").notNull().references(() => organizations.id);
 const createdAt = () => timestamp("created_at", { withTimezone: true }).notNull().defaultNow();
 const money = (name: string) => bigint(name, { mode: "number" });
+/** Cột bytea — bản drizzle này chưa có sẵn, khai qua customType (dùng cho ảnh tin đăng). */
+const bytea = customType<{ data: Uint8Array; driverData: Buffer }>({
+  dataType: () => "bytea",
+});
 
 // ---------- Danh tính (không thuộc tổ chức, không RLS) ----------
 
@@ -601,4 +606,25 @@ export const listingReports = pgTable(
     createdAt: createdAt(),
   },
   (t) => [uniqueIndex("listing_reports_unique").on(t.listingId, t.userId)],
+);
+
+/**
+ * Ảnh thật của tin (gian hàng v2). Lưu bytea ngay trong CSDL: tin đăng ít, ảnh đã nén
+ * phía client (tối đa 1280px, JPEG), không thêm dịch vụ lưu trữ ngoài. RLS xem
+ * drizzle/0013_listing_images.sql; đọc/ghi đi qua withUser() như mọi bảng chợ.
+ */
+export const listingImages = pgTable(
+  "listing_images",
+  {
+    id: id(),
+    listingId: uuid("listing_id")
+      .notNull()
+      .references(() => listings.id, { onDelete: "cascade" }),
+    /** Thứ tự hiển thị; ảnh đầu tiên là ảnh bìa trên thẻ tin. */
+    position: integer("position").notNull(),
+    contentType: text("content_type").notNull(),
+    data: bytea("data").notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [uniqueIndex("listing_images_pos").on(t.listingId, t.position), index("listing_images_listing").on(t.listingId)],
 );

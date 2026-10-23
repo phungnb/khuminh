@@ -9,6 +9,7 @@ import { withOrg, withUser } from "@/db/client";
 import {
   leases,
   listingContacts,
+  listingImages,
   listingInterests,
   listingReports,
   listings,
@@ -53,6 +54,31 @@ export const LISTING_TTL_DAYS = 30;
 
 /** Chỉ gia hạn khi tin đã hết hạn hoặc còn tối đa ngần này ngày. */
 export const RENEW_WINDOW_DAYS = 3;
+
+/** Số ảnh tối đa trên một tin; ảnh đầu tiên là ảnh bìa. */
+export const MAX_LISTING_PHOTOS = 6;
+
+/** Dung lượng tối đa mỗi ảnh sau khi client đã nén (chặn payload bất thường). */
+export const MAX_PHOTO_BYTES = 1_000_000;
+
+export const PHOTO_CONTENT_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
+
+export interface PhotoInput {
+  contentType: string;
+  data: Uint8Array;
+}
+
+function validatePhotos(photos: PhotoInput[]) {
+  if (photos.length > MAX_LISTING_PHOTOS) throw new UserError(`Mỗi tin tối đa ${MAX_LISTING_PHOTOS} ảnh`);
+  for (const p of photos) {
+    if (!(PHOTO_CONTENT_TYPES as readonly string[]).includes(p.contentType)) {
+      throw new UserError("Chỉ nhận ảnh JPEG, PNG hoặc WebP");
+    }
+    if (p.data.byteLength === 0 || p.data.byteLength > MAX_PHOTO_BYTES) {
+      throw new UserError("Mỗi ảnh tối đa 1 MB sau khi nén");
+    }
+  }
+}
 
 const DAY_MS = 24 * 3600 * 1000;
 
@@ -170,6 +196,8 @@ export interface ListingRow {
   mine: boolean;
   distanceKm: number | null;
   interestCount: number;
+  /** Ảnh bìa (ảnh đầu tiên) nếu tin có ảnh thật; null thì thẻ tin hiện minh hoạ theo danh mục. */
+  coverImageId: string | null;
 }
 
 const listingCols = {
@@ -189,6 +217,7 @@ const listingCols = {
   authorUserId: listings.authorUserId,
   authorName: users.displayName,
   interestCount: sql<number>`(select count(*)::int from ${listingInterests} i where i.listing_id = ${listings.id})`,
+  coverImageId: sql<string | null>`(select i.id from ${listingImages} i where i.listing_id = ${listings.id} order by i.position asc limit 1)`,
 };
 
 interface RawListing {
@@ -208,6 +237,7 @@ interface RawListing {
   authorUserId: string;
   authorName: string;
   interestCount: number;
+  coverImageId: string | null;
 }
 
 function toRow(r: RawListing, userId: string, center: LatLng | null): ListingRow {
@@ -229,6 +259,7 @@ function toRow(r: RawListing, userId: string, center: LatLng | null): ListingRow
     mine: r.authorUserId === userId,
     distanceKm: center ? distanceKm(center, { lat: r.lat, lng: r.lng }) : null,
     interestCount: Number(r.interestCount),
+    coverImageId: r.coverImageId ?? null,
   };
 }
 
@@ -293,6 +324,8 @@ export interface ListingInput {
   price?: number | null;
   contact: string;
   placeKey: string;
+  /** Ảnh thật đính kèm (đã nén phía client); tối đa MAX_LISTING_PHOTOS. */
+  photos?: PhotoInput[];
 }
 
 function validateListing(input: ListingInput) {
@@ -312,6 +345,8 @@ function validateListing(input: ListingInput) {
 
 export async function createListing(userId: string, input: ListingInput): Promise<string> {
   validateListing(input);
+  const photos = input.photos ?? [];
+  validatePhotos(photos);
   const place = (await marketPlaces(userId)).find((p) => p.key === input.placeKey);
   if (!place) throw new ForbiddenError("Bạn chỉ đăng tin tại nơi mình đang ở hoặc quản lý");
   if (!place.location) throw new UserError("Cơ sở này chưa có vị trí. Nhờ chủ trọ cập nhật vị trí trước.");
@@ -333,6 +368,11 @@ export async function createListing(userId: string, input: ListingInput): Promis
       })
       .returning({ id: listings.id });
     await tx.insert(listingContacts).values({ listingId: l!.id, contact: input.contact.trim() });
+    if (photos.length) {
+      await tx.insert(listingImages).values(
+        photos.map((p, i) => ({ listingId: l!.id, position: i, contentType: p.contentType, data: p.data })),
+      );
+    }
     return l!.id;
   });
 }
@@ -348,6 +388,8 @@ export interface InterestRow {
 }
 
 export interface ListingDetail extends ListingRow {
+  /** Mọi ảnh của tin theo thứ tự hiển thị (rỗng nếu tin chưa có ảnh thật). */
+  imageIds: string[];
   /** Liên hệ người đăng: có khi là người đăng hoặc đã được đồng ý. */
   contact: string | null;
   myInterest: InterestRow | null;
@@ -364,6 +406,11 @@ export async function getListing(userId: string, listingId: string, center: LatL
       .innerJoin(users, eq(users.id, listings.authorUserId))
       .where(eq(listings.id, listingId))) as RawListing[];
     if (!r) return null;
+    const imgs = await tx
+      .select({ id: listingImages.id })
+      .from(listingImages)
+      .where(eq(listingImages.listingId, listingId))
+      .orderBy(listingImages.position);
     // RLS chỉ trả về liên hệ khi được phép.
     const [c] = await tx.select().from(listingContacts).where(eq(listingContacts.listingId, listingId));
     const ints = await tx
@@ -387,6 +434,7 @@ export async function getListing(userId: string, listingId: string, center: LatL
     const mine = r.authorUserId === userId;
     return {
       ...toRow(r, userId, center),
+      imageIds: imgs.map((i) => i.id),
       contact: c?.contact ?? null,
       myInterest: ints.find((i) => i.userId === userId) ?? null,
       interests: mine ? ints : [],
@@ -499,7 +547,7 @@ export async function reopenListing(userId: string, listingId: string): Promise<
   );
 }
 
-/** Xoá hẳn tin của mình (liên hệ, lượt quan tâm, báo cáo xoá theo cascade). */
+/** Xoá hẳn tin của mình (liên hệ, lượt quan tâm, báo cáo, ảnh xoá theo cascade). */
 export async function deleteListing(userId: string, listingId: string): Promise<void> {
   await withUser(userId, async (tx) => {
     const r = await tx
@@ -508,6 +556,52 @@ export async function deleteListing(userId: string, listingId: string): Promise<
       .returning({ id: listings.id });
     if (r.length === 0) throw new ForbiddenError();
   });
+}
+
+/** Thêm ảnh vào tin của mình; tổng số ảnh sau khi thêm không vượt quá giới hạn. */
+export async function addListingPhotos(userId: string, listingId: string, photos: PhotoInput[]): Promise<void> {
+  if (photos.length === 0) throw new UserError("Chưa chọn ảnh nào");
+  validatePhotos(photos);
+  await ownListing(userId, listingId);
+  await withUser(userId, async (tx) => {
+    const existing = await tx
+      .select({ position: listingImages.position })
+      .from(listingImages)
+      .where(eq(listingImages.listingId, listingId));
+    if (existing.length + photos.length > MAX_LISTING_PHOTOS) {
+      throw new UserError(`Mỗi tin tối đa ${MAX_LISTING_PHOTOS} ảnh (đang có ${existing.length})`);
+    }
+    const next = existing.reduce((m, r) => Math.max(m, r.position), -1) + 1;
+    await tx.insert(listingImages).values(
+      photos.map((p, i) => ({ listingId, position: next + i, contentType: p.contentType, data: p.data })),
+    );
+  });
+}
+
+/** Xoá một ảnh khỏi tin của mình. */
+export async function removeListingPhoto(userId: string, listingId: string, imageId: string): Promise<void> {
+  await ownListing(userId, listingId);
+  await withUser(userId, async (tx) => {
+    const r = await tx
+      .delete(listingImages)
+      .where(and(eq(listingImages.id, imageId), eq(listingImages.listingId, listingId)))
+      .returning({ id: listingImages.id });
+    if (r.length === 0) throw new UserError("Không thấy ảnh này");
+  });
+}
+
+/** Nội dung một ảnh để route /api/img phát ra; RLS quyết định người xem có được thấy hay không. */
+export async function getListingImage(
+  userId: string,
+  imageId: string,
+): Promise<{ contentType: string; data: Uint8Array } | null> {
+  const [img] = await withUser(userId, (tx) =>
+    tx
+      .select({ contentType: listingImages.contentType, data: listingImages.data })
+      .from(listingImages)
+      .where(eq(listingImages.id, imageId)),
+  );
+  return img ?? null;
 }
 
 export async function reportListing(userId: string, listingId: string, reason: string): Promise<void> {

@@ -8,15 +8,18 @@ import * as s from "@/db/schema";
 import type { Actor } from "./audit";
 import { actorFor, signUpOwner } from "./auth";
 import {
+  addListingPhotos,
   closeListing,
   createListing,
   decideInterest,
   deleteListing,
   expressInterest,
   getListing,
+  getListingImage,
   marketPlaces,
   myInterests,
   myListings,
+  removeListingPhoto,
   renewListing,
   reopenListing,
   reportListing,
@@ -243,5 +246,52 @@ describe("chợ quanh đây", () => {
     expect(far.open).toEqual([]);
     expect(far.soldCount).toBe(0);
     expect(await sellerShop(tB, randomUUID(), centerA, 20)).toBeNull();
+  });
+
+  it("ảnh tin: bìa, xem, thêm/xoá chỉ người đăng, xoá tin thì ảnh mất theo", async () => {
+    const centerA = { lat: 10.7731, lng: 106.6991 };
+    const px = (n: number) => ({ contentType: "image/jpeg", data: new Uint8Array([n, n, n]) });
+    const id = await createListing(tA, {
+      kind: "sell",
+      category: "Điện tử",
+      title: "Tủ lạnh mini",
+      price: 800_000,
+      contact: "0909000666",
+      placeKey: keyA,
+      photos: [px(1), px(2)],
+    });
+    // Ảnh bìa trên thẻ tin + danh sách ảnh ở chi tiết, đúng thứ tự.
+    const found = (await searchListings(tB, centerA, 20)).find((l) => l.id === id)!;
+    const detail = (await getListing(tB, id, centerA))!;
+    expect(detail.imageIds).toHaveLength(2);
+    expect(found.coverImageId).toBe(detail.imageIds[0]);
+    // Người khác xem được nội dung ảnh của tin đang mở.
+    const img = await getListingImage(tB, detail.imageIds[0]!);
+    expect(img!.contentType).toBe("image/jpeg");
+    expect([...img!.data]).toEqual([1, 1, 1]);
+    // Người không phải người đăng không thêm/xoá ảnh được.
+    await expect(addListingPhotos(tB, id, [px(3)])).rejects.toThrow(/không có quyền/);
+    await expect(removeListingPhoto(tB, id, detail.imageIds[0]!)).rejects.toThrow(/không có quyền/);
+    // Người đăng thêm tới giới hạn 6 thì bị chặn; loại ảnh lạ và ảnh quá lớn bị chặn.
+    await addListingPhotos(tA, id, [px(3), px(4), px(5), px(6)]);
+    await expect(addListingPhotos(tA, id, [px(7)])).rejects.toThrow(/tối đa 6/);
+    await expect(
+      createListing(tA, {
+        kind: "sell",
+        category: "Khác",
+        title: "Ảnh gif",
+        contact: "0909000666",
+        placeKey: keyA,
+        photos: [{ contentType: "image/gif", data: new Uint8Array([1]) }],
+      }),
+    ).rejects.toThrow(/JPEG, PNG hoặc WebP/);
+    await expect(addListingPhotos(tA, id, [{ contentType: "image/png", data: new Uint8Array(1_000_001) }])).rejects.toThrow(/tối đa 1 MB/);
+    // Xoá một ảnh, rồi xoá hẳn tin thì ảnh còn lại mất theo (cascade).
+    const after = (await getListing(tA, id, centerA))!;
+    expect(after.imageIds).toHaveLength(6);
+    await removeListingPhoto(tA, id, after.imageIds[0]!);
+    expect((await getListing(tA, id, centerA))!.imageIds).toHaveLength(5);
+    await deleteListing(tA, id);
+    expect(await getListingImage(tA, after.imageIds[1]!)).toBeNull();
   });
 });

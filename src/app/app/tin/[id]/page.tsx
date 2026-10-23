@@ -3,12 +3,14 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, Clock, Flag, MapPin, Phone, Tag } from "lucide-react";
 import { CategoryTile } from "@/components/category";
 import { ago, KindBadge, priceText } from "@/components/listing-card";
+import { ListingGallery } from "@/components/listing-gallery";
+import { ListingPhotoPicker } from "@/components/listing-photo-picker";
 import { ShareButton } from "@/components/share-button";
 import { Flash } from "@/components/ui";
 import { formatKm } from "@/lib/geo";
 import { requireUser } from "@/lib/session";
-import { getListing, marketPlaces } from "@/server/market";
-import { closeListingAction, decideInterestAction, interestAction, renewListingAction, reportListingAction } from "../../market-actions";
+import { getListing, marketPlaces, MAX_LISTING_PHOTOS } from "@/server/market";
+import { addPhotosAction, closeListingAction, decideInterestAction, interestAction, removePhotoAction, renewListingAction, reportListingAction } from "../../market-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -33,7 +35,11 @@ export default async function Page({
   return (
     <>
       <div className="relative -mx-4 -mt-4">
-        <CategoryTile category={l.category} className="aspect-[16/10] w-full" iconClass="size-16" />
+        {l.imageIds.length > 0 ? (
+          <ListingGallery imageIds={l.imageIds} title={l.title} />
+        ) : (
+          <CategoryTile category={l.category} className="aspect-[16/10] w-full" iconClass="size-16" />
+        )}
         <Link
           href={sp.o ? `/app/quanh-day?o=${encodeURIComponent(sp.o)}` : "/app/quanh-day"}
           aria-label="Về chợ"
@@ -44,7 +50,7 @@ export default async function Page({
         <div className="absolute top-3 right-3">
           <ShareButton title={l.title} />
         </div>
-        <KindBadge kind={l.kind} className="absolute bottom-3 left-4" />
+        <KindBadge kind={l.kind} className={l.imageIds.length > 0 ? "absolute top-16 left-4" : "absolute bottom-3 left-4"} />
       </div>
       <div className="mt-4">
         <Flash params={sp} />
@@ -106,6 +112,38 @@ export default async function Page({
           {l.expired ? (
             <p className="text-sm font-semibold text-danger">Tin đã hết hạn nên không còn hiện ở chợ. Gia hạn để hiện lại.</p>
           ) : null}
+          <div className="border-t border-border pt-3">
+            <h3 className="font-semibold">Ảnh của tin ({l.imageIds.length}/{MAX_LISTING_PHOTOS})</h3>
+            {l.imageIds.length > 0 ? (
+              <div className="mt-2 grid grid-cols-3 gap-2">
+                {l.imageIds.map((imgId, i) => (
+                  <div key={imgId} className="relative">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={`/api/img/${imgId}`} alt="" className="aspect-[4/3] w-full rounded-xl border border-border object-cover" />
+                    {i === 0 ? (
+                      <span className="absolute bottom-1 left-1 rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-semibold text-white">Ảnh bìa</span>
+                    ) : null}
+                    <form action={removePhotoAction}>
+                      {hidden}
+                      <input type="hidden" name="imageId" value={imgId} />
+                      <input type="hidden" name="back" value={`/app/tin/${l.id}`} />
+                      <button aria-label="Xoá ảnh này" className="absolute top-1 right-1 grid size-6 place-items-center rounded-full bg-black/60 text-sm leading-none text-white">×</button>
+                    </form>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="mt-1 text-sm text-fg-muted">Chưa có ảnh thật — tin đang hiện hình minh hoạ theo danh mục.</p>
+            )}
+            {l.imageIds.length < MAX_LISTING_PHOTOS ? (
+              <form action={addPhotosAction} className="mt-3 space-y-2">
+                {hidden}
+                <input type="hidden" name="back" value={`/app/tin/${l.id}`} />
+                <ListingPhotoPicker max={MAX_LISTING_PHOTOS - l.imageIds.length} />
+                <button className="btn-secondary">Thêm ảnh đã chọn</button>
+              </form>
+            ) : null}
+          </div>
           {l.interests.length === 0 ? <p className="text-sm text-fg-muted">Chưa có ai.</p> : null}
           {l.interests.map((i) => (
             <div key={i.id} className="rounded-lg border border-border p-3 text-sm">
