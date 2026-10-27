@@ -11,6 +11,7 @@ import {
   decideInterest,
   deleteListing,
   expressInterest,
+  markSoldListing,
   removeListingPhoto,
   renewListing,
   reopenListing,
@@ -71,13 +72,24 @@ export async function createListingAction(f: FormData) {
 export async function interestAction(f: FormData) {
   const user = await requireUser();
   const id = str(f, "listingId");
-  await runAction(`/app/tin/${id}`, () => expressInterest(user.id, id, str(f, "contact"), str(f, "note")), "Đã gửi. Người đăng sẽ xem và đồng ý chia sẻ liên hệ.");
+  let offer: number | null = null;
+  if (str(f, "offer")) {
+    offer = parseMoney(f.get("offer"));
+    if (Number.isNaN(offer)) throw new UserError("Trả giá phải là số nguyên đồng");
+  }
+  await runAction(`/app/tin/${id}`, () => expressInterest(user.id, id, str(f, "contact"), str(f, "note"), offer), "Đã gửi. Người đăng sẽ xem và đồng ý chia sẻ liên hệ.");
+}
+
+export async function markSoldListingAction(f: FormData) {
+  const user = await requireUser();
+  const id = str(f, "listingId");
+  await runAction(back(f, `/app/tin/${id}`), () => markSoldListing(user.id, id), "Đã đánh dấu đã bán");
 }
 
 export async function decideInterestAction(f: FormData) {
   const user = await requireUser();
   const accept = str(f, "decision") === "accept";
-  await runAction(`/app/tin/${str(f, "listingId")}`, async () => {
+  await runAction(back(f, `/app/tin/${str(f, "listingId")}`), async () => {
     await decideInterest(user.id, str(f, "interestId"), accept);
   }, accept ? "Đã đồng ý, hai bên thấy liên hệ của nhau" : "Đã từ chối");
 }

@@ -4,7 +4,7 @@
 // Mọi truy cập bảng chợ đi qua withUser() — RLS theo app.user_id (drizzle/0007_market_rls.sql).
 // Liên hệ người đăng ở bảng riêng, chỉ lộ khi người đăng đồng ý một lượt quan tâm.
 
-import { and, desc, eq, gte, ilike, inArray, isNull, lte, ne, or, sql } from "drizzle-orm";
+import { and, desc, eq, gte, ilike, inArray, isNotNull, isNull, lte, ne, or, sql } from "drizzle-orm";
 import { withOrg, withUser } from "@/db/client";
 import {
   leases,
@@ -16,6 +16,7 @@ import {
   memberships,
   properties,
   propertyStaff,
+  sessions,
   tenants,
   units,
   users,
@@ -184,6 +185,8 @@ export interface ListingRow {
   price: number | null;
   areaLabel: string;
   status: "open" | "closed";
+  /** Ngày người đăng bấm "Đã bán" (null nếu chưa bán). */
+  soldAt: Date | null;
   hidden: boolean;
   /** Thời điểm tin hết hạn hiển thị ở chợ. */
   expiresAt: Date;
@@ -198,6 +201,9 @@ export interface ListingRow {
   interestCount: number;
   /** Ảnh bìa (ảnh đầu tiên) nếu tin có ảnh thật; null thì thẻ tin hiện minh hoạ theo danh mục. */
   coverImageId: string | null;
+  /** Hồ sơ người bán mini: số tin đã bán + lần đăng nhập gần nhất (xấp xỉ "hoạt động … trước"). */
+  sellerSoldCount: number;
+  sellerLastActiveAt: Date | null;
 }
 
 const listingCols = {
@@ -211,6 +217,7 @@ const listingCols = {
   lng: listings.lng,
   areaLabel: listings.areaLabel,
   status: listings.status,
+  soldAt: listings.soldAt,
   hiddenAt: listings.hiddenAt,
   expiresAt: listings.expiresAt,
   createdAt: listings.createdAt,
@@ -218,6 +225,8 @@ const listingCols = {
   authorName: users.displayName,
   interestCount: sql<number>`(select count(*)::int from ${listingInterests} i where i.listing_id = ${listings.id})`,
   coverImageId: sql<string | null>`(select i.id from ${listingImages} i where i.listing_id = ${listings.id} order by i.position asc limit 1)`,
+  sellerSoldCount: sql<number>`(select count(*)::int from ${listings} l where l.author_user_id = ${listings.authorUserId} and l.sold_at is not null)`,
+  sellerLastActiveAt: sql<Date | null>`(select max(s.created_at) from ${sessions} s where s.user_id = ${listings.authorUserId})`,
 };
 
 interface RawListing {
@@ -231,6 +240,7 @@ interface RawListing {
   lng: number;
   areaLabel: string;
   status: "open" | "closed";
+  soldAt: Date | null;
   hiddenAt: Date | null;
   expiresAt: Date;
   createdAt: Date;
@@ -238,6 +248,8 @@ interface RawListing {
   authorName: string;
   interestCount: number;
   coverImageId: string | null;
+  sellerSoldCount: number;
+  sellerLastActiveAt: Date | null;
 }
 
 function toRow(r: RawListing, userId: string, center: LatLng | null): ListingRow {
@@ -250,6 +262,7 @@ function toRow(r: RawListing, userId: string, center: LatLng | null): ListingRow
     price: r.price,
     areaLabel: r.areaLabel,
     status: r.status,
+    soldAt: r.soldAt,
     hidden: r.hiddenAt !== null,
     expiresAt: r.expiresAt,
     expired: r.status === "open" && r.expiresAt.getTime() <= Date.now(),
@@ -260,6 +273,9 @@ function toRow(r: RawListing, userId: string, center: LatLng | null): ListingRow
     distanceKm: center ? distanceKm(center, { lat: r.lat, lng: r.lng }) : null,
     interestCount: Number(r.interestCount),
     coverImageId: r.coverImageId ?? null,
+    sellerSoldCount: Number(r.sellerSoldCount),
+    // max() qua sql thô trả về chuỗi ở runtime dù kiểu khai là Date — chuẩn hoá về Date cho đúng kiểu.
+    sellerLastActiveAt: r.sellerLastActiveAt ? new Date(r.sellerLastActiveAt) : null,
   };
 }
 
@@ -383,6 +399,8 @@ export interface InterestRow {
   name: string;
   contact: string;
   note: string | null;
+  /** Giá đề xuất khi quan tâm (đồng, riêng tư); null nếu người mua không trả giá. */
+  offerPrice: number | null;
   status: "pending" | "accepted" | "declined";
   createdAt: Date;
 }
@@ -420,6 +438,7 @@ export async function getListing(userId: string, listingId: string, center: LatL
         name: users.displayName,
         contact: listingInterests.contact,
         note: listingInterests.note,
+        offerPrice: listingInterests.offerPrice,
         status: listingInterests.status,
         createdAt: listingInterests.createdAt,
       })
@@ -443,20 +462,30 @@ export async function getListing(userId: string, listingId: string, center: LatL
   });
 }
 
-export async function expressInterest(userId: string, listingId: string, contact: string, note?: string | null): Promise<void> {
+export async function expressInterest(
+  userId: string,
+  listingId: string,
+  contact: string,
+  note?: string | null,
+  offerPrice?: number | null,
+): Promise<void> {
   const c = contact.trim();
   if (c.length < 6 || c.length > 100) throw new UserError("Cần nhập SĐT hoặc Zalo để người đăng liên hệ lại");
   if ((note ?? "").length > 500) throw new UserError("Lời nhắn tối đa 500 ký tự");
+  if (offerPrice !== null && offerPrice !== undefined && (!Number.isInteger(offerPrice) || offerPrice < 0 || offerPrice > 10_000_000_000)) {
+    throw new UserError("Trả giá không hợp lệ");
+  }
   const author = await withUser(userId, async (tx) => {
     const [l] = await tx
-      .select({ author: listings.authorUserId, title: listings.title, status: listings.status })
+      .select({ author: listings.authorUserId, title: listings.title, status: listings.status, soldAt: listings.soldAt })
       .from(listings)
       .where(eq(listings.id, listingId));
     if (!l) throw new UserError("Tin không còn");
     if (l.author === userId) throw new UserError("Đây là tin của bạn");
+    if (l.soldAt) throw new UserError("Tin đã bán");
     if (l.status !== "open") throw new UserError("Tin đã đóng");
     try {
-      await tx.insert(listingInterests).values({ listingId, userId, contact: c, note: note?.trim() || null });
+      await tx.insert(listingInterests).values({ listingId, userId, contact: c, note: note?.trim() || null, offerPrice: offerPrice ?? null });
     } catch (e) {
       if (pgErrorCode(e) === "23505") throw new UserError("Bạn đã bấm quan tâm tin này");
       throw e;
@@ -496,6 +525,8 @@ export async function decideInterest(userId: string, interestId: string, accept:
 }
 
 export async function closeListing(userId: string, listingId: string): Promise<void> {
+  const l = await ownListing(userId, listingId);
+  if (l.soldAt) throw new UserError("Tin đã bán, không đóng lại được");
   await withUser(userId, async (tx) => {
     const r = await tx
       .update(listings)
@@ -506,11 +537,24 @@ export async function closeListing(userId: string, listingId: string): Promise<v
   });
 }
 
+/** Người đăng bấm "Đã bán": tin rời feed (status closed) + ghi ngày bán, không mở lại/gia hạn được. */
+export async function markSoldListing(userId: string, listingId: string): Promise<void> {
+  const l = await ownListing(userId, listingId);
+  if (l.soldAt) throw new UserError("Tin đã bán rồi");
+  if (l.status !== "open") throw new UserError("Tin đã đóng");
+  await withUser(userId, (tx) =>
+    tx
+      .update(listings)
+      .set({ status: "closed", soldAt: new Date() })
+      .where(and(eq(listings.id, listingId), eq(listings.authorUserId, userId))),
+  );
+}
+
 /** Đọc tin của chính người đăng để kiểm tra trạng thái vòng đời trước khi đổi. */
 async function ownListing(userId: string, listingId: string) {
   const [l] = await withUser(userId, (tx) =>
     tx
-      .select({ status: listings.status, hiddenAt: listings.hiddenAt, expiresAt: listings.expiresAt })
+      .select({ status: listings.status, soldAt: listings.soldAt, hiddenAt: listings.hiddenAt, expiresAt: listings.expiresAt })
       .from(listings)
       .where(and(eq(listings.id, listingId), eq(listings.authorUserId, userId))),
   );
@@ -521,6 +565,7 @@ async function ownListing(userId: string, listingId: string) {
 /** Gia hạn hiển thị thêm 30 ngày. Chỉ khi tin đang mở và đã hết hạn hoặc sắp hết hạn. */
 export async function renewListing(userId: string, listingId: string): Promise<void> {
   const l = await ownListing(userId, listingId);
+  if (l.soldAt) throw new UserError("Tin đã bán, không gia hạn được");
   if (l.hiddenAt) throw new UserError("Tin đang bị ẩn do báo cáo, không gia hạn được");
   if (l.status !== "open") throw new UserError("Tin đã đóng. Mở lại tin để đăng tiếp.");
   if (l.expiresAt.getTime() > Date.now() + RENEW_WINDOW_DAYS * DAY_MS) {
@@ -537,6 +582,7 @@ export async function renewListing(userId: string, listingId: string): Promise<v
 /** Mở lại tin đã đóng: trạng thái mở và hạn hiển thị tính lại 30 ngày. */
 export async function reopenListing(userId: string, listingId: string): Promise<void> {
   const l = await ownListing(userId, listingId);
+  if (l.soldAt) throw new UserError("Tin đã bán, không mở lại được");
   if (l.hiddenAt) throw new UserError("Tin đang bị ẩn do báo cáo, không mở lại được");
   if (l.status !== "closed") throw new UserError("Tin chưa đóng");
   await withUser(userId, (tx) =>
@@ -640,9 +686,9 @@ export interface SellerShop {
   areaLabel: string | null;
   /** Tin đang mở còn hạn trong bán kính của người xem, mới nhất trước. */
   open: ListingRow[];
-  /** Tin đã đóng trong bán kính của người xem, mới nhất trước (tối đa 8). */
+  /** Tin đã bán (người đăng bấm "Đã bán") trong bán kính của người xem, mới bán trước (tối đa 8). */
   sold: ListingRow[];
-  /** Tổng số tin đã đóng trong bán kính (đếm đủ, không chỉ phần đã lấy). */
+  /** Tổng số tin đã bán trong bán kính (đếm đủ, không chỉ phần đã lấy). */
   soldCount: number;
 }
 
@@ -667,6 +713,7 @@ export async function sellerShop(userId: string, sellerId: string, center: LatLn
         and(
           eq(listings.authorUserId, sellerId),
           eq(listings.status, "closed"),
+          isNotNull(listings.soldAt),
           isNull(listings.hiddenAt),
           gte(listings.lat, b.minLat),
           lte(listings.lat, b.maxLat),
@@ -674,7 +721,7 @@ export async function sellerShop(userId: string, sellerId: string, center: LatLn
           lte(listings.lng, b.maxLng),
         ),
       )
-      .orderBy(desc(listings.createdAt))
+      .orderBy(desc(listings.soldAt))
       .limit(50),
   )) as RawListing[];
   const soldAll = soldRows.map((r) => toRow(r, userId, center)).filter((r) => r.distanceKm! <= radiusKm);
@@ -686,6 +733,58 @@ export async function sellerShop(userId: string, sellerId: string, center: LatLn
     sold: soldAll.slice(0, 8),
     soldCount: soldAll.length,
   };
+}
+
+/** Hộp thư người bán: lượt quan tâm vào tin của mình, gom theo từng tin, tin có quan tâm mới nhất trước. */
+export interface SellerInboxGroup {
+  listing: ListingRow;
+  interests: InterestRow[];
+}
+
+export async function sellerInterestInbox(userId: string): Promise<SellerInboxGroup[]> {
+  const mine = await myListings(userId);
+  if (mine.length === 0) return [];
+  const ids = mine.map((l) => l.id);
+  const rows = await withUser(userId, (tx) =>
+    tx
+      .select({
+        listingId: listingInterests.listingId,
+        id: listingInterests.id,
+        userId: listingInterests.userId,
+        name: users.displayName,
+        contact: listingInterests.contact,
+        note: listingInterests.note,
+        offerPrice: listingInterests.offerPrice,
+        status: listingInterests.status,
+        createdAt: listingInterests.createdAt,
+      })
+      .from(listingInterests)
+      .innerJoin(users, eq(users.id, listingInterests.userId))
+      .where(inArray(listingInterests.listingId, ids))
+      .orderBy(desc(listingInterests.createdAt)),
+  );
+  const byListing = new Map<string, InterestRow[]>();
+  for (const r of rows) {
+    const list = byListing.get(r.listingId) ?? [];
+    list.push({
+      id: r.id,
+      userId: r.userId,
+      name: r.name,
+      contact: r.contact,
+      note: r.note,
+      offerPrice: r.offerPrice,
+      status: r.status,
+      createdAt: r.createdAt,
+    });
+    byListing.set(r.listingId, list);
+  }
+  const groups = mine
+    .filter((l) => byListing.has(l.id))
+    .map((listing) => ({ listing, interests: byListing.get(listing.id)! }));
+  groups.sort(
+    (a, b) => (b.interests[0]?.createdAt.getTime() ?? 0) - (a.interests[0]?.createdAt.getTime() ?? 0),
+  );
+  return groups;
 }
 
 export async function myInterests(userId: string): Promise<Array<{ listing: ListingRow; status: InterestRow["status"] }>> {
