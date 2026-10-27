@@ -3,26 +3,29 @@ import { Heart, Megaphone } from "lucide-react";
 import { ago, ListingCard, ListingGrid } from "@/components/listing-card";
 import { EmptyState, Flash } from "@/components/ui";
 import { cn } from "@/lib/cn";
+import { vnd } from "@/lib/format";
 import { requireUser } from "@/lib/session";
-import { myInterests, myListings, type ListingRow } from "@/server/market";
-import { closeListingAction, deleteListingAction, renewListingAction, reopenListingAction } from "../market-actions";
+import { myInterests, myListings, sellerInterestInbox, type ListingRow } from "@/server/market";
+import { closeListingAction, decideInterestAction, deleteListingAction, markSoldListingAction, renewListingAction, reopenListingAction } from "../market-actions";
 
 export const dynamic = "force-dynamic";
 
 const STATUS = { pending: "Chờ người đăng", accepted: "Đã đồng ý", declined: "Đã từ chối" } as const;
 
-// Nhóm vòng đời của tin phía người đăng. Thứ tự ưu tiên: bị ẩn > đã đóng > hết hạn > đang hiển thị.
-type Group = "hien" | "het-han" | "da-dong" | "bi-an";
+// Nhóm vòng đời của tin phía người đăng. Thứ tự ưu tiên: bị ẩn > đã bán > đã đóng > hết hạn > đang hiển thị.
+type Group = "hien" | "het-han" | "da-dong" | "da-ban" | "bi-an";
 const GROUPS: Array<{ key: Group; label: string }> = [
   { key: "hien", label: "Đang hiển thị" },
   { key: "het-han", label: "Hết hạn" },
   { key: "da-dong", label: "Đã đóng" },
+  { key: "da-ban", label: "Đã bán" },
   { key: "bi-an", label: "Bị ẩn" },
 ];
 const DAY_MS = 24 * 3600 * 1000;
 
 function groupOf(l: ListingRow): Group {
   if (l.hidden) return "bi-an";
+  if (l.soldAt) return "da-ban";
   if (l.status === "closed") return "da-dong";
   if (l.expired) return "het-han";
   return "hien";
@@ -30,6 +33,7 @@ function groupOf(l: ListingRow): Group {
 
 function metaLine(l: ListingRow, g: Group): string {
   if (g === "bi-an") return "Bị ẩn do đủ 3 báo cáo vi phạm. Nếu cho rằng bị nhầm, hãy liên hệ bộ phận hỗ trợ.";
+  if (g === "da-ban") return `Đã bán ngày ${l.soldAt!.toLocaleDateString("vi-VN")} · đăng ${ago(l.createdAt)}`;
   if (g === "da-dong") return `Đã đóng · đăng ${ago(l.createdAt)}`;
   if (g === "het-han") return `Đã hết hạn ${ago(l.expiresAt)} · gia hạn để hiện lại ở chợ`;
   const days = Math.max(0, Math.ceil((l.expiresAt.getTime() - Date.now()) / DAY_MS));
@@ -66,6 +70,10 @@ function ManageCard({ l, backTo }: { l: ListingRow; backTo: string }) {
       <div className="mt-1.5 flex flex-wrap items-start gap-1.5">
         {g === "hien" ? (
           <>
+            <form action={markSoldListingAction}>
+              {hidden}
+              <button className="btn">Đã bán</button>
+            </form>
             <form action={closeListingAction}>
               {hidden}
               <button className="btn-secondary">Đóng tin</button>
@@ -101,7 +109,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ t
   const tab = sp.tab === "quan-tam" ? "quan-tam" : "tin";
   const group: Group = GROUPS.some((g) => g.key === sp.s) ? (sp.s as Group) : "hien";
   const user = await requireUser();
-  const [mine, ints] = await Promise.all([myListings(user.id), myInterests(user.id)]);
+  const [mine, ints, inbox] = await Promise.all([myListings(user.id), myInterests(user.id), sellerInterestInbox(user.id)]);
   const waiting = mine.reduce((n, l) => n + (l.status === "open" ? l.interestCount : 0), 0);
   const counts = new Map<Group, number>(GROUPS.map((g) => [g.key, 0]));
   for (const l of mine) counts.set(groupOf(l), (counts.get(groupOf(l)) ?? 0) + 1);
@@ -153,6 +161,52 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ t
                 ))}
               </div>
             )}
+            {inbox.length > 0 ? (
+              <section className="mt-8 space-y-4">
+                <h2 className="font-bold">Lượt quan tâm đến tin của tôi</h2>
+                {inbox.map(({ listing, interests }) => (
+                  <div key={listing.id} className="card space-y-3">
+                    <Link href={`/app/tin/${listing.id}`} className="font-semibold text-brand-ink">
+                      {listing.title}
+                    </Link>
+                    {interests.map((i) => (
+                      <div key={i.id} className="rounded-lg border border-border p-3 text-sm">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-semibold">{i.name}</span>
+                          <span className="text-xs text-fg-subtle">{STATUS[i.status]}</span>
+                        </div>
+                        {i.note ? <p className="mt-1 text-fg-muted">“{i.note}”</p> : null}
+                        {i.offerPrice !== null ? (
+                          <p className="mt-1 font-semibold text-brand">Trả giá {vnd(i.offerPrice)}</p>
+                        ) : null}
+                        <p className="mt-1">
+                          Liên hệ:{" "}
+                          <a className="font-semibold text-brand" href={`tel:${i.contact.replace(/[^0-9+]/g, "")}`}>{i.contact}</a>
+                        </p>
+                        {i.status === "pending" ? (
+                          <div className="mt-2 flex gap-2">
+                            <form action={decideInterestAction}>
+                              <input type="hidden" name="listingId" value={listing.id} />
+                              <input type="hidden" name="interestId" value={i.id} />
+                              <input type="hidden" name="decision" value="accept" />
+                              <input type="hidden" name="back" value="/app/cua-toi" />
+                              <button className="btn">Đồng ý chia sẻ SĐT</button>
+                            </form>
+                            <form action={decideInterestAction}>
+                              <input type="hidden" name="listingId" value={listing.id} />
+                              <input type="hidden" name="interestId" value={i.id} />
+                              <input type="hidden" name="decision" value="decline" />
+                              <input type="hidden" name="back" value="/app/cua-toi" />
+                              <button className="btn-secondary">Từ chối</button>
+                            </form>
+                          </div>
+                        ) : null}
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </section>
+            ) : null}
           </>
         )
       ) : ints.length === 0 ? (

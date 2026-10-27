@@ -563,6 +563,8 @@ export const listings = pgTable(
     expiresAt: timestamp("expires_at", { withTimezone: true })
       .notNull()
       .default(sql`now() + interval '30 days'`),
+    /** Người đăng bấm "Đã bán": tin chuyển status closed + ghi ngày bán, rời feed, không mở lại được. */
+    soldAt: timestamp("sold_at", { withTimezone: true }),
     createdAt: createdAt(),
   },
   (t) => [index("listings_geo").on(t.lat, t.lng), index("listings_author").on(t.authorUserId)],
@@ -588,6 +590,8 @@ export const listingInterests = pgTable(
     /** Liên hệ của người quan tâm (SĐT/Zalo), chỉ người đăng tin thấy. */
     contact: text("contact").notNull(),
     note: text("note"),
+    /** Giá người mua đề xuất khi quan tâm (đồng, riêng tư trong luồng quan tâm, không phải đấu giá công khai). */
+    offerPrice: integer("offer_price"),
     status: interestStatus("status").notNull().default("pending"),
     createdAt: createdAt(),
   },

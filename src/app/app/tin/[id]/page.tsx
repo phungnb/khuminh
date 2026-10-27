@@ -2,15 +2,17 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Clock, Flag, MapPin, Phone, Tag } from "lucide-react";
 import { CategoryTile } from "@/components/category";
+import { InterestForm } from "@/components/interest-form";
 import { ago, KindBadge, priceText } from "@/components/listing-card";
 import { ListingGallery } from "@/components/listing-gallery";
 import { ListingPhotoPicker } from "@/components/listing-photo-picker";
 import { ShareButton } from "@/components/share-button";
 import { Flash } from "@/components/ui";
+import { vnd } from "@/lib/format";
 import { formatKm } from "@/lib/geo";
 import { requireUser } from "@/lib/session";
 import { getListing, marketPlaces, MAX_LISTING_PHOTOS } from "@/server/market";
-import { addPhotosAction, closeListingAction, decideInterestAction, interestAction, removePhotoAction, renewListingAction, reportListingAction } from "../../market-actions";
+import { addPhotosAction, closeListingAction, decideInterestAction, interestAction, markSoldListingAction, removePhotoAction, renewListingAction, reportListingAction } from "../../market-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -79,13 +81,21 @@ export default async function Page({
           <span className="grid size-11 place-items-center rounded-full bg-surface-2 text-lg font-bold">{l.authorName.charAt(0).toUpperCase()}</span>
           <div className="min-w-0">
             <p className="truncate font-semibold">{l.authorName}</p>
-            <p className="text-xs text-fg-subtle">Người đăng · cư dân gần {l.areaLabel}</p>
+            <p className="text-xs text-fg-subtle">
+              {l.sellerSoldCount > 0 ? `Đã bán ${l.sellerSoldCount} tin · ` : ""}
+              {l.sellerLastActiveAt ? `Hoạt động ${ago(l.sellerLastActiveAt)}` : "Mới tham gia"}
+              {` · cư dân gần ${l.areaLabel}`}
+            </p>
           </div>
           <Link href={`/app/nguoi/${l.authorId}`} className="ml-auto shrink-0 text-sm font-medium text-brand-ink">
             {l.mine ? "Trang của tôi" : "Tin khác"}
           </Link>
         </div>
-        {l.status === "closed" ? <p className="mt-3 text-sm font-semibold text-fg-muted">Tin đã đóng.</p> : null}
+        {l.soldAt ? (
+          <p className="mt-3 text-sm font-semibold text-fg-muted">Đã bán ngày {l.soldAt.toLocaleDateString("vi-VN")}.</p>
+        ) : l.status === "closed" ? (
+          <p className="mt-3 text-sm font-semibold text-fg-muted">Tin đã đóng.</p>
+        ) : null}
         {l.hidden ? <p className="mt-3 text-sm font-semibold text-danger">Tin bị ẩn do nhiều người báo cáo.</p> : null}
       </article>
 
@@ -102,6 +112,11 @@ export default async function Page({
                     <button className="btn">Gia hạn 30 ngày</button>
                   </form>
                 ) : null}
+                <form action={markSoldListingAction}>
+                  {hidden}
+                  <input type="hidden" name="back" value={`/app/tin/${l.id}`} />
+                  <button className="btn">Đã bán</button>
+                </form>
                 <form action={closeListingAction}>
                   {hidden}
                   <button className="btn-secondary">Đóng tin</button>
@@ -152,6 +167,9 @@ export default async function Page({
                 <span className="text-xs text-fg-subtle">{INTEREST_LABEL[i.status]}</span>
               </div>
               {i.note ? <p className="mt-1 text-fg-muted">“{i.note}”</p> : null}
+              {i.offerPrice !== null ? (
+                <p className="mt-1 font-semibold text-brand">Trả giá {vnd(i.offerPrice)}{l.price !== null ? ` (giá đăng ${vnd(l.price)})` : ""}</p>
+              ) : null}
               <p className="mt-1">
                 Liên hệ:{" "}
                 <a className="font-semibold text-brand" href={`tel:${i.contact.replace(/[^0-9+]/g, "")}`}>{i.contact}</a>
@@ -187,20 +205,7 @@ export default async function Page({
             ) : l.status === "open" && l.expired ? (
               <p className="text-sm text-fg-muted">Tin đã hết hạn hiển thị.</p>
             ) : l.status === "open" ? (
-              <form action={interestAction} className="space-y-3">
-                {hidden}
-                <h2 className="font-semibold">Tôi quan tâm</h2>
-                <div>
-                  <label className="label" htmlFor="contact">SĐT / Zalo của bạn</label>
-                  <input className="input" id="contact" name="contact" required placeholder="0901 234 567" />
-                </div>
-                <div>
-                  <label className="label" htmlFor="note">Lời nhắn</label>
-                  <input className="input" id="note" name="note" maxLength={500} placeholder="Còn không bạn? Tối nay mình qua xem." />
-                </div>
-                <button className="btn w-full">Gửi quan tâm</button>
-                <p className="text-xs text-fg-subtle">Người đăng đồng ý thì hai bên thấy liên hệ của nhau.</p>
-              </form>
+              <InterestForm action={interestAction} listingId={l.id} />
             ) : null}
           </section>
           {l.reportedByMe ? (

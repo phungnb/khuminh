@@ -48,7 +48,9 @@ export function ListingCard({ l, query = "" }: { l: ListingRow; query?: string }
           <CategoryTile category={l.category} className="aspect-[4/3] w-full" />
         )}
         <KindBadge kind={l.kind} className="absolute top-2 left-2" />
-        {l.status === "closed" ? (
+        {l.soldAt ? (
+          <span className="absolute top-2 right-2 rounded-full bg-black/60 px-2 py-0.5 text-[11px] font-semibold text-white">Đã bán</span>
+        ) : l.status === "closed" ? (
           <span className="absolute top-2 right-2 rounded-full bg-black/60 px-2 py-0.5 text-[11px] font-semibold text-white">Đã đóng</span>
         ) : null}
       </div>
@@ -59,6 +61,10 @@ export function ListingCard({ l, query = "" }: { l: ListingRow; query?: string }
           <MapPin className="size-3 shrink-0" aria-hidden />
           {l.distanceKm !== null ? `${formatKm(l.distanceKm)} · ` : ""}
           {ago(l.createdAt)}
+        </p>
+        <p className="mt-1 truncate text-[11px] text-fg-subtle">
+          {l.authorName}
+          {l.sellerSoldCount > 0 ? ` · Đã bán ${l.sellerSoldCount} tin` : ""}
         </p>
         {l.interestCount > 0 && l.mine ? <p className="mt-1 text-[11px] font-semibold text-coin">{l.interestCount} người quan tâm</p> : null}
         {l.hidden ? <p className="mt-1 text-[11px] font-semibold text-danger">Bị ẩn do báo cáo</p> : null}
