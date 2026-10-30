@@ -1,4 +1,5 @@
 import Link from "next/link";
+import SubmitButton from "@/components/submit-button";
 import { Empty, Flash, PageTitle } from "@/components/ui";
 import { dmy, vnd } from "@/lib/format";
 import { requireActor } from "@/lib/session";
@@ -117,7 +118,7 @@ export default async function Page({
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" name="waterMeter" /> Mỗi phòng có đồng hồ nước riêng
         </label>
-        <button className="btn">Thêm phòng</button>
+        <SubmitButton>Thêm phòng</SubmitButton>
       </form>
     </>
   );

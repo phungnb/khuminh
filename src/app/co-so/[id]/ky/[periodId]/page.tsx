@@ -1,4 +1,5 @@
 import Link from "next/link";
+import SubmitButton from "@/components/submit-button";
 import { notFound } from "next/navigation";
 import { ChevronDown } from "lucide-react";
 import { Badge, Empty, Flash, PageTitle } from "@/components/ui";
@@ -7,7 +8,7 @@ import { dmy, vnd } from "@/lib/format";
 import { requireActor } from "@/lib/session";
 import { invoicesForPeriod } from "@/server/queries";
 import { periodWorksheet, type RowStatus, type WorksheetRow } from "@/server/worksheet";
-import { calcRoomAction, generateDraftsAction, issueAllAction, issueOneAction } from "../../../actions";
+import { calcRoomAction, deleteDraftInvoiceAction, generateDraftsAction, issueAllAction, issueOneAction } from "../../../actions";
 
 const STATUS: Record<RowStatus, { label: string; badge: string }> = {
   missing_reading: { label: "Thiếu chỉ số", badge: "overdue" },
@@ -73,7 +74,7 @@ export default async function Page({
       <div className="mb-4 flex flex-wrap gap-2">
         <form action={generateDraftsAction}>
           {hidden}
-          <button className="btn-secondary">Lập nháp cả kỳ</button>
+          <SubmitButton className="btn-secondary">Lập nháp cả kỳ</SubmitButton>
         </form>
         {drafts.length ? (
           <form action={issueAllAction}>
@@ -81,7 +82,7 @@ export default async function Page({
             {drafts.map((d) => (
               <input key={d.invoice!.id} type="hidden" name="invoiceId" value={d.invoice!.id} />
             ))}
-            <button className="btn">Phát hành {drafts.length} hóa đơn</button>
+            <SubmitButton>Phát hành {drafts.length} hóa đơn</SubmitButton>
           </form>
         ) : null}
         {issued.length ? (
@@ -201,7 +202,7 @@ function RoomRow({
                   ))}
                 </>
               )}
-              <button className="btn w-full sm:w-auto">{r.invoice ? "Lưu & tính lại" : "Lưu & tính tiền"}</button>
+              <SubmitButton className="btn w-full sm:w-auto">{r.invoice ? "Lưu & tính lại" : "Lưu & tính tiền"}</SubmitButton>
             </form>
           ) : null}
           {r.invoice ? (
@@ -210,12 +211,20 @@ function RoomRow({
                 {r.invoice.status === "draft" ? "Xem nháp" : "Hóa đơn, gửi ảnh, thu tiền"}
               </Link>
               {r.invoice.status === "draft" ? (
-                <form action={issueOneAction}>
-                  {hidden}
-                  <input type="hidden" name="leaseId" value={r.leaseId} />
-                  <input type="hidden" name="invoiceId" value={r.invoice.id} />
-                  <button className="btn">Phát hành phòng này</button>
-                </form>
+                <>
+                  <form action={issueOneAction}>
+                    {hidden}
+                    <input type="hidden" name="leaseId" value={r.leaseId} />
+                    <input type="hidden" name="invoiceId" value={r.invoice.id} />
+                    <SubmitButton>Phát hành phòng này</SubmitButton>
+                  </form>
+                  <form action={deleteDraftInvoiceAction}>
+                    {hidden}
+                    <input type="hidden" name="leaseId" value={r.leaseId} />
+                    <input type="hidden" name="invoiceId" value={r.invoice.id} />
+                    <SubmitButton className="btn-danger">Hủy nháp</SubmitButton>
+                  </form>
+                </>
               ) : null}
             </div>
           ) : null}

@@ -20,11 +20,13 @@ export default async function Page({ searchParams }: { searchParams: Promise<Sp>
   const user = await requireUser();
   const places = await marketPlaces(user.id);
   const usable = places.filter((p) => p.location);
+  // Bán kính nhớ từ lần chọn trước (cookie) để Hôm nay và lần mở sau dùng chung;
+  // tính trước cả khi chưa có vị trí để NoPlace vẫn hiện nút chọn phạm vi.
+  const radius = parseRadius(sp.r ?? (await cookies()).get(RADIUS_COOKIE)?.value);
 
-  if (usable.length === 0) return <NoPlace places={places} />;
+  if (usable.length === 0) return <NoPlace places={places} radius={radius} />;
 
   const place = usable.find((p) => p.key === sp.o) ?? usable[0]!;
-  const radius = parseRadius(sp.r ?? (await cookies()).get(RADIUS_COOKIE)?.value);
   const kind = sp.k && sp.k in LISTING_KIND_LABEL ? (sp.k as ListingKind) : undefined;
   const category = sp.c && (CATEGORIES as readonly string[]).includes(sp.c) ? sp.c : undefined;
   const q = sp.q?.trim() || undefined;
@@ -36,7 +38,9 @@ export default async function Page({ searchParams }: { searchParams: Promise<Sp>
     for (const [k, v] of Object.entries({ ...state, ...o })) if (v) p.set(k, v);
     return `/app/quanh-day?${p.toString()}`;
   };
-  const back = `?o=${encodeURIComponent(place.key)}`;
+  // Giữ cả bán kính trong link sang trang tin để bấm quay lại vẫn đúng phạm vi
+  // đang xem (trước đây link chỉ giữ khu, về chợ là rơi về bán kính nhớ trong cookie).
+  const back = `?o=${encodeURIComponent(place.key)}&r=${radius}`;
 
   return (
     <>
@@ -154,7 +158,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Sp>
   );
 }
 
-function NoPlace({ places }: { places: Place[] }) {
+function NoPlace({ places, radius }: { places: Place[]; radius: number }) {
   const manager = places.find((p) => p.role === "manager");
   if (places.length === 0) {
     return (
@@ -166,19 +170,39 @@ function NoPlace({ places }: { places: Place[] }) {
     );
   }
   return (
-    <EmptyState
-      icon={MapPinOff}
-      title="Khu chưa có vị trí trên bản đồ"
-      description={
-        manager ? "Đặt vị trí cho cơ sở để cư dân thấy tin quanh đây." : `Nhờ chủ nhà cập nhật vị trí ${places[0]!.name} để dùng chợ.`
-      }
-      action={
-        manager ? (
-          <Link className="btn" href={`/co-so/${manager.key.split(".")[1]}/bieu-phi#vi-tri`}>
-            Đặt vị trí {manager.name}
-          </Link>
-        ) : undefined
-      }
-    />
+    <>
+      <EmptyState
+        icon={MapPinOff}
+        title="Khu chưa có vị trí trên bản đồ"
+        description={
+          manager ? "Đặt vị trí cho cơ sở để cư dân thấy tin quanh đây." : `Nhờ chủ nhà cập nhật vị trí ${places[0]!.name} để dùng chợ.`
+        }
+        action={
+          manager ? (
+            <Link className="btn" href={`/co-so/${manager.key.split(".")[1]}/bieu-phi#vi-tri`}>
+              Đặt vị trí {manager.name}
+            </Link>
+          ) : undefined
+        }
+      />
+      <div className="mt-4">
+        <p className="text-sm font-semibold">Tìm trong phạm vi</p>
+        <div className="mt-2 flex gap-1.5">
+          {RADII_KM.map((r) => (
+            <Link
+              key={r}
+              href={`/app/quanh-day?r=${r}`}
+              className={cn(
+                "rounded-full px-3 py-1 text-xs font-semibold",
+                r === radius ? "bg-brand text-brand-fg" : "bg-surface-2 text-fg",
+              )}
+            >
+              {r} km
+            </Link>
+          ))}
+        </div>
+        <p className="mt-2 text-sm text-fg-muted">Chọn trước phạm vi — sẽ áp dụng ngay khi cơ sở có vị trí.</p>
+      </div>
+    </>
   );
 }

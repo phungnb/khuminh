@@ -1,4 +1,5 @@
 import Link from "next/link";
+import SubmitButton from "@/components/submit-button";
 import { Flash, PageTitle } from "@/components/ui";
 import { addDays } from "@/domain/dates";
 import { dmy } from "@/lib/format";
@@ -39,7 +40,7 @@ export default async function Page({
           <label className="label">Đến ngày</label>
           <input className="input" type="date" name="end" defaultValue={next.end} required />
         </div>
-        <button className="btn">Mở kỳ mới</button>
+        <SubmitButton>Mở kỳ mới</SubmitButton>
       </form>
       <ul className="space-y-2">
         {periods.map((p) => (

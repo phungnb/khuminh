@@ -29,7 +29,7 @@ export function blur(c: LatLng): LatLng {
   return { lat: Number(r(c.lat).toFixed(3)), lng: Number(r(c.lng).toFixed(3)) };
 }
 
-export const RADII_KM = [1, 3, 10, 20] as const;
+export const RADII_KM = [1, 3, 5, 10, 20] as const;
 export const DEFAULT_RADIUS_KM = 3;
 
 export function parseRadius(v: string | undefined): number {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import SubmitButton from "@/components/submit-button";
 
 /** Câu hỏi nhanh khi quan tâm (một bộ cố định cho mọi danh mục, tránh tin nhắn rác). */
 const QUICK_QUESTIONS = ["Còn không?", "Có ship trong khu không?", "Có bớt không?", "Tình trạng thực tế ra sao?"];
@@ -46,7 +47,7 @@ export function InterestForm({ action, listingId }: { action: (f: FormData) => v
         <label className="label" htmlFor="offer">Trả giá (không bắt buộc, chỉ người đăng thấy)</label>
         <input className="input" id="offer" name="offer" inputMode="numeric" placeholder="VD: 120000" />
       </div>
-      <button className="btn w-full">Gửi quan tâm</button>
+      <SubmitButton className="btn w-full">Gửi quan tâm</SubmitButton>
       <p className="text-xs text-fg-subtle">Người đăng đồng ý thì hai bên thấy liên hệ của nhau.</p>
     </form>
   );

@@ -29,7 +29,7 @@ export function CoSoWall({
             {address ? <p className="mt-0.5 truncate text-sm text-white/80">{address}</p> : null}
           </div>
           <span className="shrink-0 rounded-full bg-white/15 px-2.5 py-1 text-[11px] font-medium text-white/90 backdrop-blur">
-            {themeLabel}
+            Chủ đề: {themeLabel}
           </span>
         </div>
         <div className="mt-4 grid grid-cols-3 gap-2">

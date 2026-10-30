@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import SubmitButton from "@/components/submit-button";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CopyBox } from "@/components/copy-box";
@@ -12,6 +13,7 @@ import { invoiceDetail, today } from "@/server/queries";
 import {
   adjustInvoiceAction,
   createShareLinkAction,
+  deleteDraftInvoiceAction,
   recordPaymentAction,
   voidInvoiceAction,
   voidPaymentAction,
@@ -85,7 +87,16 @@ export default async function Page({
       </section>
 
       {inv.status === "draft" ? (
-        <p className="mt-4 text-sm text-fg-muted">Hóa đơn nháp. Phát hành ở trang kỳ để gửi cho người thuê.</p>
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <p className="text-sm text-fg-muted">Hóa đơn nháp. Phát hành ở trang kỳ để gửi cho người thuê.</p>
+          <form action={deleteDraftInvoiceAction}>
+            <input type="hidden" name="propertyId" value={id} />
+            <input type="hidden" name="periodId" value={inv.billingPeriodId} />
+            <input type="hidden" name="leaseId" value={inv.leaseId} />
+            <input type="hidden" name="invoiceId" value={invoiceId} />
+            <SubmitButton className="btn-danger">Hủy nháp</SubmitButton>
+          </form>
+        </div>
       ) : null}
 
       {inv.status === "issued" ? (
@@ -103,7 +114,7 @@ export default async function Page({
               <form action={createShareLinkAction}>
                 <input type="hidden" name="invoiceId" value={invoiceId} />
                 <input type="hidden" name="back" value={back} />
-                <button className="btn-secondary">Tạo link hóa đơn</button>
+                <SubmitButton className="btn-secondary">Tạo link hóa đơn</SubmitButton>
                 <p className="mt-2 text-xs text-fg-subtle">Link xem được không cần đăng nhập, hết hạn sau 60 ngày. Tạo link trước thì ảnh có in link bản mới nhất.</p>
               </form>
             )}
@@ -138,7 +149,7 @@ export default async function Page({
                   <input className="input" name="reference" />
                 </div>
               </div>
-              <button className="btn">Ghi nhận</button>
+              <SubmitButton>Ghi nhận</SubmitButton>
             </form>
           ) : null}
 
@@ -154,7 +165,7 @@ export default async function Page({
               <label className="label">Lý do</label>
               <input className="input" name="reason" required />
             </div>
-            <button className="btn-secondary">Lưu điều chỉnh</button>
+            <SubmitButton className="btn-secondary">Lưu điều chỉnh</SubmitButton>
           </form>
 
           <section className="card space-y-3">
@@ -164,14 +175,14 @@ export default async function Page({
                 <input type="hidden" name="back" value={back} />
                 <input type="hidden" name="paymentId" value={p.payment.id} />
                 <input className="input flex-1" name="reason" placeholder="Lý do hủy thanh toán" required />
-                <button className="btn-danger">Hủy khoản thu {vnd(p.payment.amount)}</button>
+                <SubmitButton className="btn-danger">Hủy khoản thu {vnd(p.payment.amount)}</SubmitButton>
               </form>
             ))}
             <form action={voidInvoiceAction} className="flex flex-wrap items-end gap-2">
               <input type="hidden" name="back" value={back} />
               <input type="hidden" name="invoiceId" value={invoiceId} />
               <input className="input flex-1" name="reason" placeholder="Lý do hủy hóa đơn" required />
-              <button className="btn-danger">Hủy hóa đơn</button>
+              <SubmitButton className="btn-danger">Hủy hóa đơn</SubmitButton>
             </form>
           </section>
         </div>

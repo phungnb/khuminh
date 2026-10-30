@@ -5,20 +5,19 @@ import { supportContact } from "@/lib/support";
 
 export const metadata: Metadata = { title: "Chính sách riêng tư — KhuMình" };
 
-// BẢN NHÁP: nội dung cần chủ dự án duyệt trước khi coi là chính thức. Mô tả đúng những gì code đang lưu.
 export default function Page() {
   const support = supportContact();
   return (
     <main className="mx-auto max-w-2xl space-y-4 px-4 py-10 text-sm leading-relaxed">
       <Link href="/" className="inline-block"><Logo /></Link>
       <h1 className="text-2xl font-bold">Chính sách riêng tư</h1>
-      <p className="text-fg-subtle">Bản nháp ngày 14/10/2026.</p>
+      <p className="text-fg-subtle">Cập nhật ngày 30/10/2026.</p>
 
       <h2 className="font-semibold">1. Dữ liệu chúng tôi lưu</h2>
       <ul className="list-disc space-y-1 pl-5">
         <li>Tài khoản: tên hiển thị, email (chủ trọ) hoặc số điện thoại (người thuê), mật khẩu dạng đã băm (không ai đọc được mật khẩu gốc).</li>
         <li>Do chủ trọ nhập: họ tên, số điện thoại người thuê, phòng, hợp đồng, tiền cọc, chỉ số điện nước, hóa đơn, thanh toán.</li>
-        <li>Chợ: tin đăng, liên hệ bạn tự nhập, vị trí của khu trọ đã làm tròn khoảng 500 m. Không lấy GPS điện thoại.</li>
+        <li>Chợ: tin đăng, liên hệ bạn tự nhập, vị trí của khu trọ đã làm tròn khoảng 500 m. App không tự lấy vị trí điện thoại; chỉ khi bạn bấm “Dùng vị trí của tôi” thì trình duyệt mới chia sẻ vị trí một lần để đặt ghim.</li>
         <li>Thông báo đẩy: địa chỉ nhận thông báo của trình duyệt, nếu bạn bật.</li>
         <li>Nhật ký thao tác liên quan tới tiền (lập, sửa, hủy hóa đơn và thanh toán) để đối soát.</li>
       </ul>

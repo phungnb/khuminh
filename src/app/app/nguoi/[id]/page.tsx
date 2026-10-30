@@ -62,7 +62,7 @@ export default async function Page({
             </p>
           </div>
           <div className="ml-auto shrink-0">
-            <ShareButton title={`Gian hàng của ${shop.name}`} />
+            <ShareButton title={`Gian hàng của ${shop.name}`} label="Chia sẻ gian hàng" />
           </div>
         </div>
         <div className="mt-4 grid grid-cols-2 border-t border-border pt-3 text-center">

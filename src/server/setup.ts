@@ -14,6 +14,7 @@ import {
   propertyStaff,
   tenants,
   units,
+  vehicles,
 } from "@/db/schema";
 import { addDays, assertIsoDate, type IsoDate } from "@/domain/dates";
 import { assertDong } from "@/domain/money";
@@ -159,6 +160,34 @@ export async function importUnits(
     }
     await audit(tx, actor, "unit.import", "property", propertyId, null, { count: created.length });
     return { created: created.length, errors: [] };
+  });
+}
+
+/** Xóa phòng (chủ trọ). Chỉ xóa được phòng chưa có hợp đồng nào (đang thuê hoặc đã trả),
+ * chưa có xe và chưa có chỉ số — các dữ liệu đó là chứng từ, xóa phòng sẽ làm mất dấu.
+ * Đồng hồ chưa có chỉ số thì xóa theo phòng. */
+export async function deleteUnit(actor: Actor, unitId: string): Promise<void> {
+  requireOwner(actor);
+  await withOrg(actor, async (tx) => {
+    const [unit] = await tx.select().from(units).where(eq(units.id, unitId));
+    if (!unit) throw new UserError("Không tìm thấy phòng");
+    await assertPropertyAccess(tx, actor, unit.propertyId);
+    const leaseRows = await tx.select({ id: leases.id }).from(leases).where(eq(leases.unitId, unitId)).limit(1);
+    if (leaseRows.length) throw new UserError("Phòng đã có hợp đồng (đang thuê hoặc đã trả), không xóa được để giữ chứng từ");
+    const vehicleRows = await tx.select({ id: vehicles.id }).from(vehicles).where(eq(vehicles.unitId, unitId)).limit(1);
+    if (vehicleRows.length) throw new UserError("Phòng còn xe đang gửi, xóa xe trước");
+    const meterRows = await tx.select({ id: meters.id }).from(meters).where(eq(meters.unitId, unitId));
+    if (meterRows.length) {
+      const readingRows = await tx
+        .select({ id: meterReadings.id })
+        .from(meterReadings)
+        .where(inArray(meterReadings.meterId, meterRows.map((m) => m.id)))
+        .limit(1);
+      if (readingRows.length) throw new UserError("Phòng đã có chỉ số điện nước, không xóa được để giữ chứng từ");
+      await tx.delete(meters).where(eq(meters.unitId, unitId));
+    }
+    await tx.delete(units).where(eq(units.id, unitId));
+    await audit(tx, actor, "unit.delete", "unit", unitId, { code: unit.code, propertyId: unit.propertyId }, null);
   });
 }
 

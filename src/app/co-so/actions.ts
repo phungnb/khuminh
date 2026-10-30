@@ -6,8 +6,8 @@ import { parseIntField, parseMoney, parseReading } from "@/lib/format";
 import { parseLocation } from "@/lib/geo";
 import { requireActor } from "@/lib/session";
 import { UserError } from "@/server/audit";
-import { today } from "@/server/queries";
-import { adjustInvoice, generateDrafts, issueInvoices, voidInvoice } from "@/server/billing";
+import { listFeeRules, today } from "@/server/queries";
+import { adjustInvoice, deleteDraftInvoice, generateDrafts, issueInvoices, refreshDraftsAfterMoveOut, voidInvoice } from "@/server/billing";
 import { setPropertyLocation } from "@/server/market";
 import { recordPayment, voidPayment } from "@/server/payments";
 import { archiveProperty, deleteDraftProperty, restoreProperty } from "@/server/property-lifecycle";
@@ -15,6 +15,7 @@ import {
   changeRent,
   createLease,
   createProperty,
+  deleteUnit,
   extendedDate,
   extendLease,
   importUnits,
@@ -146,8 +147,26 @@ export async function setLeaseDueDayAction(f: FormData) {
 
 export async function moveOutAction(f: FormData) {
   const actor = await requireActor();
-  const back = `/co-so/${str(f, "propertyId")}/phong/${str(f, "unitId")}`;
-  await runAction(back, () => moveOut(actor, str(f, "leaseId"), str(f, "lastDay")), "Đã ghi nhận chuyển đi. Nhớ ghi chỉ số ngày chuyển đi.");
+  const propertyId = str(f, "propertyId");
+  const unitId = str(f, "unitId");
+  const leaseId = str(f, "leaseId");
+  const lastDay = str(f, "lastDay");
+  const back = `/co-so/${propertyId}/phong/${unitId}`;
+  await runAction(back, async () => {
+    await moveOut(actor, leaseId, lastDay);
+    // Tính lại nháp kỳ chứa ngày chuyển đi để tổng khớp ngày ở thực tế.
+    // Kỳ chưa mở / đã khóa / thiếu chỉ số thì thôi, nháp cũ vẫn giữ.
+    const refreshed = await refreshDraftsAfterMoveOut(actor, propertyId, leaseId, lastDay).catch(() => null);
+    if (refreshed && !refreshed.errors.length) return `${back}?ok=${encodeURIComponent("Đã ghi nhận chuyển đi. Hóa đơn nháp đã tính lại theo ngày chuyển đi.")}`;
+    return `${back}?ok=${encodeURIComponent("Đã ghi nhận chuyển đi. Nhớ ghi chỉ số ngày chuyển đi rồi lập lại nháp.")}`;
+  });
+}
+
+/** Hủy hóa đơn nháp từ màn Tính tiền hoặc trang hóa đơn. Xong về lại màn Tính tiền. */
+export async function deleteDraftInvoiceAction(f: FormData) {
+  const actor = await requireActor();
+  const back = `/co-so/${str(f, "propertyId")}/ky/${str(f, "periodId")}?phong=${str(f, "leaseId")}`;
+  await runAction(back, () => deleteDraftInvoice(actor, str(f, "invoiceId")), "Đã hủy hóa đơn nháp.");
 }
 
 export async function recordReadingsAction(f: FormData) {
@@ -173,10 +192,21 @@ export async function setFeeRuleAction(f: FormData) {
   const id = str(f, "propertyId");
   await runAction(`/co-so/${id}/bieu-phi`, async () => {
     const method = str(f, "method") as FeeMethod;
+    // Form chọn khoản theo tên: "__new__" thì lấy mã ở ô "Mã khoản mới";
+    // đổi giá khoản đang có mà để trống tên thì giữ tên cũ.
+    const picked = str(f, "key");
+    const key = picked === "__new__" ? str(f, "newKey") : picked;
+    if (picked === "__new__" && !key) throw new UserError("Nhập mã khoản mới (chữ thường, không dấu, ví dụ internet)");
+    let name = str(f, "name");
+    if (!name && picked !== "__new__") {
+      const current = (await listFeeRules(actor, id)).find((r) => r.key === key);
+      name = current?.name ?? "";
+    }
+    if (!name) throw new UserError("Nhập tên hiển thị của khoản phí");
     await setFeeRule(actor, {
       propertyId: id,
-      key: str(f, "key"),
-      name: str(f, "name"),
+      key,
+      name,
       method,
       unitPrice: money(f, "unitPrice", "Đơn giá"),
       meterKind: method === "metered" ? (str(f, "meterKind") as MeterKind) : null,
@@ -387,6 +417,27 @@ export async function updateMaintenanceAction(f: FormData) {
     const { updateMaintenanceStatus } = await import("@/server/maintenance");
     await updateMaintenanceStatus(actor, str(f, "requestId"), str(f, "status") as "in_progress" | "done" | "rejected", str(f, "note"));
   }, "Đã cập nhật, người thuê sẽ nhận thông báo");
+}
+
+/** Chủ trọ/nhân viên ghi nhận sự cố thay người thuê (người thuê gọi điện, nhắn Zalo...). */
+export async function managerReportIssueAction(f: FormData) {
+  const actor = await requireActor();
+  const back = `/co-so/${str(f, "propertyId")}/su-co`;
+  await runAction(back, async () => {
+    const { createMaintenanceRequestByManager } = await import("@/server/maintenance");
+    await createMaintenanceRequestByManager(actor, str(f, "propertyId"), str(f, "unitId"), {
+      title: str(f, "title"),
+      body: str(f, "body"),
+      urgent: str(f, "urgent") === "1",
+    });
+  }, "Đã ghi nhận sự cố");
+}
+
+/** Xóa phòng (chỉ xóa được phòng chưa có hợp đồng, xe, chỉ số). Xong về lại danh sách phòng. */
+export async function deleteUnitAction(f: FormData) {
+  const actor = await requireActor();
+  const back = `/co-so/${str(f, "propertyId")}/phong`;
+  await runAction(back, () => deleteUnit(actor, str(f, "unitId")), "Đã xóa phòng");
 }
 
 export async function deletePropertyAction(f: FormData) {

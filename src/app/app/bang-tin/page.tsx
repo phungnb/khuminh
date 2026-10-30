@@ -1,4 +1,5 @@
 import { Megaphone, Plus } from "lucide-react";
+import SubmitButton from "@/components/submit-button";
 import Link from "next/link";
 import { PostList } from "@/components/post-list";
 import { EmptyState, Flash } from "@/components/ui";
@@ -82,7 +83,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ l
             <textarea className="input" id="body" name="body" rows={3} maxLength={2000} placeholder="Phòng 101, nhắn Zalo 09xx..." />
           </div>
           <p className="text-xs text-fg-subtle">Chỉ người đang ở khu trọ này và chủ trọ thấy tin của bạn.</p>
-          <button className="btn w-full">Đăng</button>
+          <SubmitButton className="btn w-full">Đăng</SubmitButton>
         </form>
       </details>
       <PostList
@@ -95,14 +96,14 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ l
                   {hidden}
                   <input type="hidden" name="postId" value={p.id} />
                   <input type="hidden" name="action" value="close" />
-                  <button className="btn-secondary">Đã xong</button>
+                  <SubmitButton className="btn-secondary">Đã xong</SubmitButton>
                 </form>
               ) : null}
               <form action={tenantClosePostAction}>
                 {hidden}
                 <input type="hidden" name="postId" value={p.id} />
                 <input type="hidden" name="action" value="remove" />
-                <button className="btn-danger">Gỡ</button>
+                <SubmitButton className="btn-danger">Gỡ</SubmitButton>
               </form>
             </>
           ) : null

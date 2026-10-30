@@ -1,4 +1,5 @@
 import { Building2, FileText, Gauge, Heart, House, LogOut, Megaphone, Shield } from "lucide-react";
+import SubmitButton from "@/components/submit-button";
 import { PushToggle } from "@/components/push-toggle";
 import { vnd } from "@/lib/format";
 import { requireUser } from "@/lib/session";
@@ -92,9 +93,9 @@ export default async function Page() {
       </section>
 
       <form action={logoutAction}>
-        <button className="btn-secondary flex w-full items-center justify-center gap-2">
+        <SubmitButton className="btn-secondary flex w-full items-center justify-center gap-2">
           <LogOut className="size-4" aria-hidden /> Đăng xuất
-        </button>
+        </SubmitButton>
       </form>
     </>
   );

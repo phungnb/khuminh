@@ -1,4 +1,5 @@
 import Link from "next/link";
+import SubmitButton from "@/components/submit-button";
 import { Heart, Megaphone } from "lucide-react";
 import { ago, ListingCard, ListingGrid } from "@/components/listing-card";
 import { EmptyState, Flash } from "@/components/ui";
@@ -48,7 +49,7 @@ function DeleteForm({ l, backTo }: { l: ListingRow; backTo: string }) {
         <input type="hidden" name="listingId" value={l.id} />
         <input type="hidden" name="back" value={backTo} />
         <p className="mb-2 text-xs text-fg-muted">Xoá vĩnh viễn tin này cùng lượt quan tâm và báo cáo kèm theo. Không khôi phục được.</p>
-        <button className="btn-danger w-full">Xoá vĩnh viễn</button>
+        <SubmitButton className="btn-danger w-full">Xoá vĩnh viễn</SubmitButton>
       </form>
     </details>
   );
@@ -72,16 +73,16 @@ function ManageCard({ l, backTo }: { l: ListingRow; backTo: string }) {
           <>
             <form action={markSoldListingAction}>
               {hidden}
-              <button className="btn">Đã bán</button>
+              <SubmitButton>Đã bán</SubmitButton>
             </form>
             <form action={closeListingAction}>
               {hidden}
-              <button className="btn-secondary">Đóng tin</button>
+              <SubmitButton className="btn-secondary">Đóng tin</SubmitButton>
             </form>
             {nearExpiry ? (
               <form action={renewListingAction}>
                 {hidden}
-                <button className="btn">Gia hạn</button>
+                <SubmitButton>Gia hạn</SubmitButton>
               </form>
             ) : null}
           </>
@@ -89,13 +90,13 @@ function ManageCard({ l, backTo }: { l: ListingRow; backTo: string }) {
         {g === "het-han" ? (
           <form action={renewListingAction}>
             {hidden}
-            <button className="btn">Gia hạn 30 ngày</button>
+            <SubmitButton>Gia hạn 30 ngày</SubmitButton>
           </form>
         ) : null}
         {g === "da-dong" ? (
           <form action={reopenListingAction}>
             {hidden}
-            <button className="btn">Mở lại tin</button>
+            <SubmitButton>Mở lại tin</SubmitButton>
           </form>
         ) : null}
         <DeleteForm l={l} backTo={backTo} />
@@ -190,14 +191,14 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ t
                               <input type="hidden" name="interestId" value={i.id} />
                               <input type="hidden" name="decision" value="accept" />
                               <input type="hidden" name="back" value="/app/cua-toi" />
-                              <button className="btn">Đồng ý chia sẻ SĐT</button>
+                              <SubmitButton>Đồng ý chia sẻ SĐT</SubmitButton>
                             </form>
                             <form action={decideInterestAction}>
                               <input type="hidden" name="listingId" value={listing.id} />
                               <input type="hidden" name="interestId" value={i.id} />
                               <input type="hidden" name="decision" value="decline" />
                               <input type="hidden" name="back" value="/app/cua-toi" />
-                              <button className="btn-secondary">Từ chối</button>
+                              <SubmitButton className="btn-secondary">Từ chối</SubmitButton>
                             </form>
                           </div>
                         ) : null}

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import SubmitButton from "@/components/submit-button";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Clock, Flag, MapPin, Phone, Tag } from "lucide-react";
 import { CategoryTile } from "@/components/category";
@@ -23,7 +24,7 @@ export default async function Page({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ loi?: string; ok?: string; o?: string }>;
+  searchParams: Promise<{ loi?: string; ok?: string; o?: string; r?: string }>;
 }) {
   const { id } = await params;
   const sp = await searchParams;
@@ -33,6 +34,11 @@ export default async function Page({
   const l = await getListing(user.id, id, center);
   if (!l) notFound();
   const hidden = <input type="hidden" name="listingId" value={l.id} />;
+  // Quay lại chợ giữ nguyên khu + bán kính đang xem (trước đây làm rơi bán kính).
+  const backParams = new URLSearchParams();
+  if (sp.o) backParams.set("o", sp.o);
+  if (sp.r) backParams.set("r", sp.r);
+  const backHref = backParams.size ? `/app/quanh-day?${backParams.toString()}` : "/app/quanh-day";
 
   return (
     <>
@@ -43,7 +49,7 @@ export default async function Page({
           <CategoryTile category={l.category} className="aspect-[16/10] w-full" iconClass="size-16" />
         )}
         <Link
-          href={sp.o ? `/app/quanh-day?o=${encodeURIComponent(sp.o)}` : "/app/quanh-day"}
+          href={backHref}
           aria-label="Về chợ"
           className="absolute top-3 left-3 grid size-11 place-items-center rounded-full bg-black/40 text-white backdrop-blur"
         >
@@ -109,17 +115,17 @@ export default async function Page({
                   <form action={renewListingAction}>
                     {hidden}
                     <input type="hidden" name="back" value={`/app/tin/${l.id}`} />
-                    <button className="btn">Gia hạn 30 ngày</button>
+                    <SubmitButton>Gia hạn 30 ngày</SubmitButton>
                   </form>
                 ) : null}
                 <form action={markSoldListingAction}>
                   {hidden}
                   <input type="hidden" name="back" value={`/app/tin/${l.id}`} />
-                  <button className="btn">Đã bán</button>
+                  <SubmitButton>Đã bán</SubmitButton>
                 </form>
                 <form action={closeListingAction}>
                   {hidden}
-                  <button className="btn-secondary">Đóng tin</button>
+                  <SubmitButton className="btn-secondary">Đóng tin</SubmitButton>
                 </form>
               </div>
             ) : null}
@@ -155,7 +161,7 @@ export default async function Page({
                 {hidden}
                 <input type="hidden" name="back" value={`/app/tin/${l.id}`} />
                 <ListingPhotoPicker max={MAX_LISTING_PHOTOS - l.imageIds.length} />
-                <button className="btn-secondary">Thêm ảnh đã chọn</button>
+                <SubmitButton className="btn-secondary">Thêm ảnh đã chọn</SubmitButton>
               </form>
             ) : null}
           </div>
@@ -180,13 +186,13 @@ export default async function Page({
                     {hidden}
                     <input type="hidden" name="interestId" value={i.id} />
                     <input type="hidden" name="decision" value="accept" />
-                    <button className="btn">Đồng ý chia sẻ SĐT</button>
+                    <SubmitButton>Đồng ý chia sẻ SĐT</SubmitButton>
                   </form>
                   <form action={decideInterestAction}>
                     {hidden}
                     <input type="hidden" name="interestId" value={i.id} />
                     <input type="hidden" name="decision" value="decline" />
-                    <button className="btn-secondary">Từ chối</button>
+                    <SubmitButton className="btn-secondary">Từ chối</SubmitButton>
                   </form>
                 </div>
               ) : null}
@@ -216,7 +222,7 @@ export default async function Page({
               <form action={reportListingAction} className="card mt-2 space-y-2">
                 {hidden}
                 <input className="input" name="reason" required minLength={3} maxLength={300} placeholder="Lừa đảo, hàng cấm, spam…" />
-                <button className="btn-danger">Gửi báo cáo</button>
+                <SubmitButton className="btn-danger">Gửi báo cáo</SubmitButton>
               </form>
             </details>
           )}
