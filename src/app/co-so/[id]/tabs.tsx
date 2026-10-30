@@ -9,7 +9,7 @@ const TABS = [
   { href: "", label: "Tổng quan", icon: LayoutDashboard },
   { href: "/phong", label: "Phòng", icon: House },
   { href: "/chi-so", label: "Chỉ số", icon: Gauge },
-  { href: "/ky", label: "Hóa đơn", icon: FileText },
+  { href: "/ky", label: "Kỳ tính tiền", icon: FileText },
   { href: "/su-co", label: "Sự cố", icon: Wrench },
   { href: "/bang-tin", label: "Bảng tin", icon: Megaphone },
   { href: "/bieu-phi", label: "Cài đặt", icon: Settings },
@@ -22,7 +22,7 @@ export function CoSoTabs({ id }: { id: string }) {
     <nav className="scrollbar-none mx-auto flex max-w-5xl gap-1 overflow-x-auto px-2">
       {TABS.map(({ href, label, icon: Icon }) => {
         const to = base + href;
-        // Tổng quan chỉ sáng khi đúng trang gốc; tab khác sáng cả trang con (vd /ky/<id>, /hoa-don thuộc Hóa đơn).
+        // Tổng quan chỉ sáng khi đúng trang gốc; tab khác sáng cả trang con (vd /ky/<id>, /hoa-don thuộc Kỳ tính tiền).
         const on = href === "" ? path === base : path.startsWith(to) || (href === "/ky" && path.startsWith(`${base}/hoa-don`));
         return (
           <Link

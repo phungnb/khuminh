@@ -162,11 +162,14 @@ function NoPlace({ places, radius }: { places: Place[]; radius: number }) {
   const manager = places.find((p) => p.role === "manager");
   if (places.length === 0) {
     return (
-      <EmptyState
-        icon={Store}
-        title="Chợ quanh đây"
-        description="Chợ đang mở cho cư dân các khu trọ, chung cư dùng KhuMình. Nhờ chủ nhà gửi link mời để vào khu của bạn."
-      />
+      <>
+        <EmptyState
+          icon={Store}
+          title="Chợ quanh đây"
+          description="Chợ đang mở cho cư dân các khu trọ, chung cư dùng KhuMình. Nhờ chủ nhà gửi link mời để vào khu của bạn."
+        />
+        <RadiusPicker radius={radius} />
+      </>
     );
   }
   return (
@@ -185,24 +188,32 @@ function NoPlace({ places, radius }: { places: Place[]; radius: number }) {
           ) : undefined
         }
       />
-      <div className="mt-4">
-        <p className="text-sm font-semibold">Tìm trong phạm vi</p>
-        <div className="mt-2 flex gap-1.5">
-          {RADII_KM.map((r) => (
-            <Link
-              key={r}
-              href={`/app/quanh-day?r=${r}`}
-              className={cn(
-                "rounded-full px-3 py-1 text-xs font-semibold",
-                r === radius ? "bg-brand text-brand-fg" : "bg-surface-2 text-fg",
-              )}
-            >
-              {r} km
-            </Link>
-          ))}
-        </div>
-        <p className="mt-2 text-sm text-fg-muted">Chọn trước phạm vi — sẽ áp dụng ngay khi cơ sở có vị trí.</p>
-      </div>
+      <RadiusPicker radius={radius} />
     </>
+  );
+}
+
+/** Nút chọn phạm vi hiện cả khi chợ chưa dùng được (chưa có khu / khu chưa có vị trí):
+ * chọn trước để nhớ, áp dụng ngay khi cơ sở có vị trí. */
+function RadiusPicker({ radius }: { radius: number }) {
+  return (
+    <div className="mt-4">
+      <p className="text-sm font-semibold">Tìm trong phạm vi</p>
+      <div className="mt-2 flex gap-1.5">
+        {RADII_KM.map((r) => (
+          <Link
+            key={r}
+            href={`/app/quanh-day?r=${r}`}
+            className={cn(
+              "rounded-full px-3 py-1 text-xs font-semibold",
+              r === radius ? "bg-brand text-brand-fg" : "bg-surface-2 text-fg",
+            )}
+          >
+            {r} km
+          </Link>
+        ))}
+      </div>
+      <p className="mt-2 text-sm text-fg-muted">Chọn trước phạm vi — sẽ áp dụng ngay khi cơ sở có vị trí.</p>
+    </div>
   );
 }
