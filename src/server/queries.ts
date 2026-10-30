@@ -67,24 +67,26 @@ export async function unitsOverview(actor: Actor, propertyId: string, on: IsoDat
           sql`(${s.leases.movedOutOn} is null or ${s.leases.movedOutOn} >= ${on})`,
         ),
       );
-    const rents = leaseRows.length
-      ? await tx
-          .select()
-          .from(s.leaseRents)
-          .where(and(inArray(s.leaseRents.leaseId, leaseRows.map((l) => l.lease.id)), lte(s.leaseRents.effectiveFrom, on)))
-          .orderBy(desc(s.leaseRents.effectiveFrom))
-      : [];
-    // Phòng nợ: hợp đồng của phòng có hóa đơn đã phát hành quá hạn chưa thu đủ.
-    const overdueUnitIds = new Set<string>();
-    if (leaseRows.length) {
-      const rows = (await tx.execute(sql`
-        select distinct i.unit_id as unit_id from invoices i
-        where i.lease_id in (${sql.join(leaseRows.map((l) => sql`${l.lease.id}::uuid`), sql`, `)})
-          and i.status = 'issued' and i.due_date < ${on}
-          and i.total > coalesce((select sum(a.amount) from payment_allocations a where a.invoice_id = i.id), 0)
-      `)) as unknown as Array<{ unit_id: string }>;
-      for (const r of rows) overdueUnitIds.add(r.unit_id);
-    }
+    // Giá thuê + phòng nợ chỉ phụ thuộc danh sách hợp đồng nên chạy song song
+    // (postgres.js xếp hàng các câu truy vấn trên cùng kết nối, tiết kiệm 1
+    // vòng đi-về mạng cho mỗi cặp).
+    const [rents, overdueRows] = leaseRows.length
+      ? await Promise.all([
+          tx
+            .select()
+            .from(s.leaseRents)
+            .where(and(inArray(s.leaseRents.leaseId, leaseRows.map((l) => l.lease.id)), lte(s.leaseRents.effectiveFrom, on)))
+            .orderBy(desc(s.leaseRents.effectiveFrom)),
+          // Phòng nợ: hợp đồng của phòng có hóa đơn đã phát hành quá hạn chưa thu đủ.
+          tx.execute(sql`
+            select distinct i.unit_id as unit_id from invoices i
+            where i.lease_id in (${sql.join(leaseRows.map((l) => sql`${l.lease.id}::uuid`), sql`, `)})
+              and i.status = 'issued' and i.due_date < ${on}
+              and i.total > coalesce((select sum(a.amount) from payment_allocations a where a.invoice_id = i.id), 0)
+          `) as unknown as Promise<Array<{ unit_id: string }>>,
+        ])
+      : [[], []];
+    const overdueUnitIds = new Set(overdueRows.map((r) => r.unit_id));
     return unitRows.map((u) => {
       const l = leaseRows.find((r) => r.lease.unitId === u.id);
       return {
@@ -293,39 +295,46 @@ export interface Dashboard {
 
 export async function dashboard(actor: Actor, propertyId: string): Promise<Dashboard> {
   const t = today();
-  const overview = await unitsOverview(actor, propertyId, t);
-  return withOrg(actor, async (tx) => {
-    const money = (await propertyMoney(tx, [propertyId], t)).get(propertyId) ?? emptyMoney();
-    const expiring = await tx
-      .select({ unitCode: s.units.code, tenantName: s.tenants.fullName, expiresOn: s.leases.expiresOn })
-      .from(s.leases)
-      .innerJoin(s.units, eq(s.units.id, s.leases.unitId))
-      .innerJoin(s.tenants, eq(s.tenants.id, s.leases.tenantId))
-      .where(
-        and(
-          eq(s.units.propertyId, propertyId),
-          eq(s.leases.status, "active"),
-          isNull(s.leases.movedOutOn),
-          sql`${s.leases.expiresOn} is not null`,
-          lte(s.leases.expiresOn, addDays(t, 30)),
-        ),
-      )
-      .orderBy(asc(s.leases.expiresOn));
-    const { receivable, collected } = money;
-    return {
-      units: {
-        total: overview.length,
-        occupied: overview.filter((u) => u.lease).length,
-        vacant: overview.filter((u) => !u.lease && u.status === "active").length,
-        maintenance: overview.filter((u) => u.status === "maintenance").length,
-      },
-      receivable,
-      collected,
-      outstanding: receivable - collected,
-      overdue: money.overdue,
-      expiring: expiring.map((e) => ({ ...e, expiresOn: e.expiresOn! })),
-    };
-  });
+  // Tổng quan phòng và tiền/sắp hết hạn không phụ thuộc nhau nên chạy song
+  // song (2 giao dịch riêng, 2 kết nối riêng); trước đây chạy nối tiếp.
+  const [overview, rest] = await Promise.all([
+    unitsOverview(actor, propertyId, t),
+    withOrg(actor, async (tx) => {
+      const money = (await propertyMoney(tx, [propertyId], t)).get(propertyId) ?? emptyMoney();
+      const expiring = await tx
+        .select({ unitCode: s.units.code, tenantName: s.tenants.fullName, expiresOn: s.leases.expiresOn })
+        .from(s.leases)
+        .innerJoin(s.units, eq(s.units.id, s.leases.unitId))
+        .innerJoin(s.tenants, eq(s.tenants.id, s.leases.tenantId))
+        .where(
+          and(
+            eq(s.units.propertyId, propertyId),
+            eq(s.leases.status, "active"),
+            isNull(s.leases.movedOutOn),
+            sql`${s.leases.expiresOn} is not null`,
+            lte(s.leases.expiresOn, addDays(t, 30)),
+          ),
+        )
+        .orderBy(asc(s.leases.expiresOn));
+      const { receivable, collected } = money;
+      return { money, expiring };
+    }),
+  ]);
+  const { money, expiring } = rest;
+  const { receivable, collected } = money;
+  return {
+    units: {
+      total: overview.length,
+      occupied: overview.filter((u) => u.lease).length,
+      vacant: overview.filter((u) => !u.lease && u.status === "active").length,
+      maintenance: overview.filter((u) => u.status === "maintenance").length,
+    },
+    receivable,
+    collected,
+    outstanding: receivable - collected,
+    overdue: money.overdue,
+    expiring: expiring.map((e) => ({ ...e, expiresOn: e.expiresOn! })),
+  };
 }
 
 export async function unitDetail(actor: Actor, unitId: string) {

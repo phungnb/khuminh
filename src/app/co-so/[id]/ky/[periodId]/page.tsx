@@ -32,10 +32,11 @@ export default async function Page({
   const { id, periodId } = await params;
   const sp = await searchParams;
   const actor = await requireActor();
-  const ws = await periodWorksheet(actor, periodId);
+  // Bảng tính kỳ và hóa đơn đã hủy không phụ thuộc nhau nên đọc song song.
+  const [ws, voidedRows] = await Promise.all([periodWorksheet(actor, periodId), invoicesForPeriod(actor, periodId)]);
   if (!ws || ws.period.propertyId !== id) notFound();
   const { period, rows } = ws;
-  const voided = (await invoicesForPeriod(actor, periodId)).filter((r) => r.status === "void");
+  const voided = voidedRows.filter((r) => r.status === "void");
   const drafts = rows.filter((r) => r.invoice?.status === "draft");
   const issued = rows.filter((r) => r.invoice?.status === "issued");
   const total = issued.reduce((s, r) => s + r.invoice!.total, 0);

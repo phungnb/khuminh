@@ -15,7 +15,10 @@ let cached: Db | null = null;
 export function getDb(): Db {
   if (cached) return cached;
   const url = appDatabaseUrl();
-  cached = drizzle(postgres(url, { max: 5, prepare: false }), { schema });
+  // Pool 10: trang Tổng quan cơ sở chạy 7 giao dịch đọc song song (mỗi giao
+  // dịch giữ 1 kết nối); pool 5 làm 2 giao dịch phải xếp hàng chờ. Neon dùng
+  // pooled connection (PgBouncer) nên 10 kết nối/hàm là an toàn.
+  cached = drizzle(postgres(url, { max: 10, prepare: false }), { schema });
   return cached;
 }
 

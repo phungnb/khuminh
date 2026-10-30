@@ -40,8 +40,11 @@ export default async function Page({
   const [property, rules] = await Promise.all([getProperty(actor, id), listFeeRules(actor, id)]);
   if (!property) notFound();
   const sp = await searchParams;
-  const staff = actor.role === "owner" ? await listStaff(actor, id) : [];
-  const usage = actor.role === "owner" ? await propertyUsage(actor, id) : null;
+  // Nhân viên + mức dùng không phụ thuộc nhau nên đọc song song (chỉ chủ trọ).
+  const [staff, usage] =
+    actor.role === "owner"
+      ? await Promise.all([listStaff(actor, id), propertyUsage(actor, id)])
+      : [[], null];
 
   return (
     <>
