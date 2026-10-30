@@ -106,6 +106,20 @@
    "when": 1792986384427,
    "tag": "0014_listing_sold_offer",
    "breakpoints": true
+  },
+  {
+   "idx": 15,
+   "version": "7",
+   "when": 1793345998272,
+   "tag": "0015_tro_so_do_xe_so_chi",
+   "breakpoints": true
+  },
+  {
+   "idx": 16,
+   "version": "7",
+   "when": 1793346011415,
+   "tag": "0016_tro_rls",
+   "breakpoints": true
   }
  ]
 }

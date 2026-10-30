@@ -143,6 +143,8 @@ export const units = pgTable(
     /** Dãy/tòa, tùy chọn. */
     block: text("block"),
     code: text("code").notNull(),
+    /** Tầng để vẽ sơ đồ; trống thì suy từ mã phòng (vd 101 → tầng 1). */
+    floor: integer("floor"),
     status: unitStatus("status").notNull().default("active"),
     notes: text("notes"),
     createdAt: createdAt(),
@@ -190,6 +192,48 @@ export const leases = pgTable(
     createdAt: createdAt(),
   },
   (t) => [index("leases_unit").on(t.unitId)],
+);
+
+// ---------- Xe của phòng (vé tháng) ----------
+
+export const vehicles = pgTable(
+  "vehicles",
+  {
+    id: id(),
+    orgId: orgId(),
+    propertyId: uuid("property_id").notNull().references(() => properties.id),
+    unitId: uuid("unit_id").notNull().references(() => units.id),
+    /** Người đứng tên xe; trống khi xe chung của phòng. */
+    tenantId: uuid("tenant_id").references(() => tenants.id),
+    /** Biển số xe. */
+    plate: text("plate").notNull(),
+    /** Loại xe: xe máy, xe đạp điện, ô tô... */
+    kind: text("kind").notNull(),
+    /** Phí vé tháng (đồng); 0 khi không thu vé. */
+    monthlyFee: money("monthly_fee").notNull().default(0),
+    note: text("note"),
+    createdAt: createdAt(),
+  },
+  (t) => [index("vehicles_unit").on(t.unitId)],
+);
+
+// ---------- Sổ chi của cơ sở (báo cáo thu-chi) ----------
+
+export const expenses = pgTable(
+  "expenses",
+  {
+    id: id(),
+    orgId: orgId(),
+    propertyId: uuid("property_id").notNull().references(() => properties.id),
+    /** Ngày chi. */
+    spentOn: date("spent_on").notNull(),
+    /** Khoản chi: sửa chữa, vận hành, mua sắm, khác. */
+    category: text("category").notNull(),
+    amount: money("amount").notNull(),
+    note: text("note"),
+    createdAt: createdAt(),
+  },
+  (t) => [index("expenses_property").on(t.propertyId, t.spentOn)],
 );
 
 export const leaseRents = pgTable(

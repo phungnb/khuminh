@@ -107,6 +107,8 @@ export async function updateProperty(actor: Actor, propertyId: string, input: Pr
 export interface UnitRow {
   block?: string | null;
   code: string;
+  /** Tầng (0 = tầng trệt); trống thì sơ đồ suy từ mã phòng. */
+  floor?: number | null;
 }
 
 export interface ImportError {
@@ -137,6 +139,8 @@ export async function importUnits(
       const code = (r.code ?? "").trim();
       if (!code) errors.push({ row: i + 1, message: "Thiếu mã phòng" });
       else if (code.length > 20) errors.push({ row: i + 1, message: "Mã phòng dài quá 20 ký tự" });
+      else if (r.floor !== undefined && r.floor !== null && (!Number.isInteger(r.floor) || r.floor < 0 || r.floor > 100))
+        errors.push({ row: i + 1, message: "Tầng phải là số nguyên 0–100" });
       else if (existing.has(code.toUpperCase())) errors.push({ row: i + 1, message: `Mã phòng ${code} đã có` });
       else if (seen.has(code.toUpperCase())) errors.push({ row: i + 1, message: `Mã phòng ${code} bị trùng trong danh sách` });
       seen.add(code.toUpperCase());
@@ -145,7 +149,7 @@ export async function importUnits(
 
     const created = await tx
       .insert(units)
-      .values(rows.map((r) => ({ orgId: actor.orgId, propertyId, block: r.block?.trim() || null, code: r.code.trim() })))
+      .values(rows.map((r) => ({ orgId: actor.orgId, propertyId, block: r.block?.trim() || null, code: r.code.trim(), floor: r.floor ?? null })))
       .returning({ id: units.id });
     const meterNames: Record<MeterKind, string> = { electricity: "Điện", water: "Nước" };
     if (meterKinds.length) {
@@ -155,6 +159,19 @@ export async function importUnits(
     }
     await audit(tx, actor, "unit.import", "property", propertyId, null, { count: created.length });
     return { created: created.length, errors: [] };
+  });
+}
+
+/** Đặt/sửa tầng của một phòng (0 = tầng trệt, null = chưa xếp, suy từ mã). */
+export async function setUnitFloor(actor: Actor, unitId: string, floor: number | null): Promise<void> {
+  requireOwner(actor);
+  if (floor !== null && (!Number.isInteger(floor) || floor < 0 || floor > 100)) throw new UserError("Tầng phải là số nguyên 0–100");
+  return withOrg(actor, async (tx) => {
+    const [unit] = await tx.select().from(units).where(eq(units.id, unitId));
+    if (!unit) throw new UserError("Không thấy phòng");
+    await assertPropertyAccess(tx, actor, unit.propertyId);
+    await tx.update(units).set({ floor }).where(eq(units.id, unitId));
+    await audit(tx, actor, "unit.set_floor", "unit", unitId, { floor: unit.floor }, { floor });
   });
 }
 

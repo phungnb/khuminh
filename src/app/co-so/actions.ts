@@ -23,9 +23,12 @@ import {
   recordReadings,
   setFeeRule,
   setLeaseDueDay,
+  setUnitFloor,
   updateProperty,
   type PropertyInput,
 } from "@/server/setup";
+import { addExpense, deleteExpense } from "@/server/expenses";
+import { addVehicle, deleteVehicle } from "@/server/vehicles";
 import type { FeeMethod, MeterKind } from "@/domain/billing";
 
 const str = (f: FormData, k: string) => String(f.get(k) ?? "").trim();
@@ -75,8 +78,13 @@ export async function importUnitsAction(f: FormData) {
       .split(/\r?\n/)
       .map((l) => l.trim())
       .filter(Boolean)
-      .map((l) => {
+      .map((l, i) => {
         const parts = l.split(/[\t,;]/).map((p) => p.trim());
+        if (parts.length >= 3) {
+          const floor = parseIntField(parts[2] ?? null);
+          if (Number.isNaN(floor)) throw new UserError(`Dòng ${i + 1}: tầng phải là số nguyên`);
+          return { block: parts[0], code: parts[1]!, floor };
+        }
         return parts.length >= 2 ? { block: parts[0], code: parts[1]! } : { code: parts[0]! };
       });
     if (rows.length === 0) throw new UserError("Chưa nhập phòng nào");
@@ -406,4 +414,62 @@ export async function restorePropertyAction(f: FormData) {
     await restoreProperty(actor, id);
     return `/co-so/${id}`;
   }, "Đã khôi phục khu");
+}
+
+export async function setUnitFloorAction(f: FormData) {
+  const actor = await requireActor();
+  const id = str(f, "propertyId");
+  const unitId = str(f, "unitId");
+  await runAction(`/co-so/${id}/phong/${unitId}`, async () => {
+    const raw = str(f, "floor");
+    const floor = raw === "" ? null : parseIntField(raw);
+    if (floor !== null && Number.isNaN(floor)) throw new UserError("Tầng phải là số nguyên");
+    await setUnitFloor(actor, unitId, floor);
+  }, "Đã lưu tầng");
+}
+
+export async function addVehicleAction(f: FormData) {
+  const actor = await requireActor();
+  const id = str(f, "propertyId");
+  const unitId = str(f, "unitId");
+  await runAction(`/co-so/${id}/phong/${unitId}`, async () => {
+    await addVehicle(actor, {
+      unitId,
+      plate: str(f, "plate"),
+      kind: str(f, "kind"),
+      monthlyFee: money(f, "monthlyFee", "Phí vé tháng"),
+      note: str(f, "note") || null,
+    });
+  }, "Đã thêm xe");
+}
+
+export async function deleteVehicleAction(f: FormData) {
+  const actor = await requireActor();
+  const id = str(f, "propertyId");
+  const unitId = str(f, "unitId");
+  await runAction(`/co-so/${id}/phong/${unitId}`, async () => {
+    await deleteVehicle(actor, str(f, "vehicleId"));
+  }, "Đã xóa xe");
+}
+
+export async function addExpenseAction(f: FormData) {
+  const actor = await requireActor();
+  const id = str(f, "propertyId");
+  await runAction(`/co-so/${id}`, async () => {
+    await addExpense(actor, {
+      propertyId: id,
+      spentOn: str(f, "spentOn"),
+      category: str(f, "category"),
+      amount: money(f, "amount", "Số tiền chi"),
+      note: str(f, "note") || null,
+    });
+  }, "Đã ghi khoản chi");
+}
+
+export async function deleteExpenseAction(f: FormData) {
+  const actor = await requireActor();
+  const id = str(f, "propertyId");
+  await runAction(`/co-so/${id}`, async () => {
+    await deleteExpense(actor, str(f, "expenseId"));
+  }, "Đã xóa khoản chi");
 }

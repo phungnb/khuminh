@@ -3,11 +3,13 @@ import Link from "next/link";
 import { CoSoWall } from "@/components/co-so-wall";
 import { ActionList } from "@/components/org-overview";
 import { Flash, Stat } from "@/components/ui";
-import { vnd } from "@/lib/format";
+import { dmy, vnd } from "@/lib/format";
 import { requireActor } from "@/lib/session";
 import { orgOverview } from "@/server/overview";
 import { actionItems } from "@/server/overview-items";
 import { dashboard, getProperty, listFeeRules, listPeriods, today } from "@/server/queries";
+import { EXPENSE_CATEGORIES, listExpenses, monthlyCashflow } from "@/server/expenses";
+import { addExpenseAction, deleteExpenseAction } from "../actions";
 
 export default async function Page({
   params,
@@ -19,12 +21,14 @@ export default async function Page({
   const { id } = await params;
   const actor = await requireActor();
   const t = today();
-  const [property, d, summary, periods, fees] = await Promise.all([
+  const [property, d, summary, periods, fees, cash, recentExpenses] = await Promise.all([
     getProperty(actor, id),
     dashboard(actor, id),
     orgOverview(actor, t, id),
     listPeriods(actor, id),
     listFeeRules(actor, id),
+    monthlyCashflow(actor, id, t.slice(0, 7)),
+    listExpenses(actor, id, 10),
   ]);
   const items = actionItems(summary, t, vnd);
   // Kỳ đang mở gần nhất đã bắt đầu: nút "Tính tiền" đưa thẳng vào màn tính theo phòng.
@@ -82,6 +86,67 @@ export default async function Page({
         <Stat icon={DoorOpen} label="Trống" value={String(d.units.vacant)} />
         <Stat icon={Wrench} label="Bảo trì" value={String(d.units.maintenance)} />
       </div>
+      <section className="card mt-6 space-y-3">
+        <h2 className="font-semibold">Thu chi tháng {month(t)}</h2>
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          <Stat icon={CircleDollarSign} label="Phải thu (hóa đơn trong tháng)" value={vnd(cash.receivable)} />
+          <Stat icon={BadgeCheck} label="Đã thu trong tháng" value={vnd(cash.collected)} tone="ok" />
+          <Stat icon={Wrench} label="Chi trong tháng" value={vnd(cash.expenses)} tone={cash.expenses > 0 ? "warn" : undefined} />
+          <Stat icon={CircleDollarSign} label="Còn lại (đã thu − chi)" value={vnd(cash.balance)} tone={cash.balance < 0 ? "warn" : undefined} />
+        </div>
+        <p className="text-xs text-fg-subtle">
+          Phải thu tính theo hóa đơn phát hành trong tháng; đã thu theo ngày nhận tiền; chi theo ngày chi. Tiền cọc không tính vào đây.
+        </p>
+        {recentExpenses.length > 0 ? (
+          <ul className="space-y-2 text-sm">
+            {recentExpenses.map((e) => (
+              <li key={e.id} className="flex flex-wrap items-center justify-between gap-2">
+                <span>
+                  {dmy(e.spentOn)} · {e.category} · {vnd(e.amount)}
+                  {e.note ? ` · ${e.note}` : ""}
+                </span>
+                {actor.role === "owner" ? (
+                  <form action={deleteExpenseAction}>
+                    <input type="hidden" name="propertyId" value={id} />
+                    <input type="hidden" name="expenseId" value={e.id} />
+                    <button className="btn-danger">Xóa</button>
+                  </form>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-sm text-fg-muted">Chưa ghi khoản chi nào.</p>
+        )}
+        {actor.role === "owner" ? (
+          <form action={addExpenseAction} className="flex flex-wrap items-end gap-2">
+            <input type="hidden" name="propertyId" value={id} />
+            <div>
+              <label className="label">Ngày chi</label>
+              <input className="input" type="date" name="spentOn" defaultValue={t} required />
+            </div>
+            <div>
+              <label className="label">Khoản chi</label>
+              <select className="input" name="category" defaultValue={EXPENSE_CATEGORIES[0]}>
+                {EXPENSE_CATEGORIES.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="label">Số tiền</label>
+              <input className="input" name="amount" inputMode="numeric" required />
+            </div>
+            <div>
+              <label className="label">Ghi chú</label>
+              <input className="input" name="note" />
+            </div>
+            <button className="btn">Ghi khoản chi</button>
+          </form>
+        ) : null}
+      </section>
       {d.units.occupied === 0 ? (
         <section className="card mt-6">
           <h2 className="mb-2 font-semibold">Bắt đầu với cơ sở này</h2>
