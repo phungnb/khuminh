@@ -1,4 +1,5 @@
 import { ClearDraft, ReadingInputs } from "@/components/reading-form";
+import SubmitButton from "@/components/submit-button";
 import { Empty, Flash, PageTitle } from "@/components/ui";
 import { requireActor } from "@/lib/session";
 import { metersForReading, today } from "@/server/queries";
@@ -28,7 +29,7 @@ export default async function Page({
           <label className="label" htmlFor="ngay">Ngày ghi</label>
           <input className="input" type="date" id="ngay" name="ngay" defaultValue={date} />
         </div>
-        <button className="btn-secondary">Đổi ngày</button>
+        <SubmitButton className="btn-secondary">Đổi ngày</SubmitButton>
       </form>
       {rows.length === 0 ? (
         <Empty>Chưa có phòng nào có đồng hồ.</Empty>
@@ -40,7 +41,7 @@ export default async function Page({
           <p className="mt-3 text-xs text-fg-subtle">
             Chỉ số chốt ngày cuối tháng hoặc sáng ngày đầu tháng sau đều dùng được cho kỳ đó. Ô để trống sẽ không lưu.
           </p>
-          <button className="btn mt-3 w-full md:w-auto">Lưu chỉ số</button>
+          <SubmitButton className="btn mt-3 w-full md:w-auto">Lưu chỉ số</SubmitButton>
         </form>
       )}
     </>

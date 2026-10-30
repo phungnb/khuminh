@@ -111,6 +111,49 @@ export async function reportablePlaces(userId: string): Promise<ReportablePlace[
   return out;
 }
 
+/** Chủ trọ/nhân viên ghi nhận sự cố thay người thuê (người thuê gọi điện, nhắn Zalo...).
+ * Không gửi push (chính người ghi đã biết); người thuê thấy yêu cầu trong mục Báo sự cố của mình. */
+export async function createMaintenanceRequestByManager(
+  actor: Actor,
+  propertyId: string,
+  unitId: string,
+  input: { title: string; body?: string | null; urgent?: boolean },
+): Promise<string> {
+  const title = input.title.trim();
+  const body = input.body?.trim() || null;
+  if (!title) throw new UserError("Cần nhập sự cố");
+  if (title.length > 120) throw new UserError("Tiêu đề tối đa 120 ký tự");
+  if (body && body.length > 1000) throw new UserError("Mô tả tối đa 1000 ký tự");
+  return withOrg(actor, async (tx) => {
+    await assertPropertyAccess(tx, actor, propertyId);
+    const [unit] = await tx.select({ id: units.id }).from(units).where(and(eq(units.id, unitId), eq(units.propertyId, propertyId)));
+    if (!unit) throw new UserError("Không tìm thấy phòng trong cơ sở này");
+    // Gắn hợp đồng mới nhất của phòng (đang thuê, hoặc vừa trả để ghi hư hỏng lúc bàn giao).
+    const [lease] = await tx
+      .select({ id: leases.id })
+      .from(leases)
+      .where(eq(leases.unitId, unitId))
+      .orderBy(desc(leases.startDate))
+      .limit(1);
+    if (!lease) throw new UserError("Phòng chưa có hợp đồng nào — ghi sự cố khi có người thuê");
+    const [row] = await tx
+      .insert(maintenanceRequests)
+      .values({
+        orgId: actor.orgId,
+        propertyId,
+        unitId,
+        leaseId: lease.id,
+        createdBy: actor.userId,
+        title,
+        body,
+        urgent: Boolean(input.urgent),
+      })
+      .returning({ id: maintenanceRequests.id });
+    await audit(tx, actor, "maintenance.create", "maintenance_request", row!.id, null, { title, urgent: Boolean(input.urgent), byManager: true });
+    return row!.id;
+  });
+}
+
 /** Người thuê báo sự cố cho phòng đang ở. Báo cho chủ trọ và nhân viên của cơ sở. */
 export async function createMaintenanceRequest(
   userId: string,

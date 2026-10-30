@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { Check, Share2 } from "lucide-react";
 
-/** Chia sẻ link tin (Zalo/Messenger qua bảng chia sẻ của máy, hoặc sao chép link). */
-export function ShareButton({ title }: { title: string }) {
+/** Chia sẻ link trang hiện tại (Zalo/Messenger qua bảng chia sẻ của máy, hoặc sao chép link). */
+export function ShareButton({ title, label = "Chia sẻ tin" }: { title: string; label?: string }) {
   const [copied, setCopied] = useState(false);
   async function share() {
     const url = window.location.href.split("?")[0]!;
@@ -17,7 +17,7 @@ export function ShareButton({ title }: { title: string }) {
     setTimeout(() => setCopied(false), 1800);
   }
   return (
-    <button type="button" onClick={share} aria-label="Chia sẻ tin" className="grid size-11 place-items-center rounded-full bg-black/40 text-white backdrop-blur">
+    <button type="button" onClick={share} aria-label={label} className="grid size-11 place-items-center rounded-full bg-black/40 text-white backdrop-blur">
       {copied ? <Check className="size-5" aria-hidden /> : <Share2 className="size-5" aria-hidden />}
     </button>
   );

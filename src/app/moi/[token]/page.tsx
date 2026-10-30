@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import SubmitButton from "@/components/submit-button";
 import Link from "next/link";
 import { LinkIcon } from "lucide-react";
 import { LegalNote } from "@/components/legal-note";
@@ -58,7 +59,7 @@ export default async function Page({
         ) : (
           <p className="text-xs text-fg-subtle">Nếu số này đã có tài khoản KhuMình, nhập mật khẩu cũ để thêm phòng này vào tài khoản.</p>
         )}
-        <button className="btn w-full">{reset ? "Đặt lại mật khẩu" : "Vào app"}</button>
+        <SubmitButton className="btn w-full">{reset ? "Đặt lại mật khẩu" : "Vào app"}</SubmitButton>
         <LegalNote />
       </form>
     </AuthShell>

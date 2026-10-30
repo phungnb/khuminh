@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import SubmitButton from "@/components/submit-button";
 import { CopyBox } from "@/components/copy-box";
 import { Flash, PageTitle } from "@/components/ui";
 import { dmy, vnd } from "@/lib/format";
@@ -12,7 +13,7 @@ import { addDays } from "@/domain/dates";
 import type { Actor } from "@/server/audit";
 import { SETTLE_WITHIN_DAYS } from "@/server/overview-items";
 import { settlementContext } from "@/server/deposit";
-import { changeRentAction, createLeaseAction, createTenantInviteAction, extendLeaseAction, moveOutAction, setLeaseDueDayAction, addVehicleAction, deleteVehicleAction, setUnitFloorAction } from "../../../actions";
+import { changeRentAction, createLeaseAction, createTenantInviteAction, deleteUnitAction, extendLeaseAction, moveOutAction, setLeaseDueDayAction, addVehicleAction, deleteVehicleAction, setUnitFloorAction } from "../../../actions";
 import { deriveFloor, floorLabel } from "@/domain/rooms";
 import { listVehicles, VEHICLE_KINDS } from "@/server/vehicles";
 import { markRefundedAction, voidSettlementAction } from "../../../deposit-actions";
@@ -87,7 +88,7 @@ export default async function Page({
                     {hidden}
                     <input type="hidden" name="leaseId" value={current.lease.id} />
                     <p className="flex-1 text-xs text-fg-muted">Người thuê quên mật khẩu? Tạo link để họ tự đặt mật khẩu mới.</p>
-                    <button className="btn-secondary">Link đặt lại mật khẩu</button>
+                    <SubmitButton className="btn-secondary">Link đặt lại mật khẩu</SubmitButton>
                   </form>
                 ) : null}
               </>
@@ -96,7 +97,7 @@ export default async function Page({
                 {hidden}
                 <input type="hidden" name="leaseId" value={current.lease.id} />
                 <p className="flex-1 text-sm text-fg-muted">Chưa có tài khoản. Mời vào app để họ tự xem hóa đơn.</p>
-                <button className="btn-secondary">Tạo link mời</button>
+                <SubmitButton className="btn-secondary">Tạo link mời</SubmitButton>
               </form>
             )}
           </div>
@@ -115,7 +116,7 @@ export default async function Page({
                     <input type="hidden" name="leaseId" value={current.lease.id} />
                     <input type="hidden" name="current" value={current.lease.expiresOn ?? ""} />
                     <input type="hidden" name="months" value={m} />
-                    <button className="btn-secondary">+{m} tháng</button>
+                    <SubmitButton className="btn-secondary">+{m} tháng</SubmitButton>
                   </form>
                 ))}
                 <form action={extendLeaseAction} className="flex flex-wrap items-end gap-2">
@@ -125,7 +126,7 @@ export default async function Page({
                     <label className="label">Hoặc tới ngày</label>
                     <input className="input" type="date" name="expiresOn" required />
                   </div>
-                  <button className="btn-secondary">Lưu</button>
+                  <SubmitButton className="btn-secondary">Lưu</SubmitButton>
                 </form>
               </div>
               <p className="text-xs text-fg-subtle">Gia hạn tính từ ngày hết hạn cũ; hợp đồng đã quá hạn thì tính từ hôm nay. Không đổi giá thuê.</p>
@@ -142,7 +143,7 @@ export default async function Page({
               <label className="label">Áp dụng từ</label>
               <input className="input" type="date" name="effectiveFrom" defaultValue={today()} required />
             </div>
-            <button className="btn-secondary">Đổi giá thuê</button>
+            <SubmitButton className="btn-secondary">Đổi giá thuê</SubmitButton>
           </form>
           {actor.role === "owner" ? (
             <form action={setLeaseDueDayAction} className="flex flex-wrap items-end gap-2">
@@ -152,7 +153,7 @@ export default async function Page({
                 <label className="label">Ngày thu tiền hằng tháng (1–28)</label>
                 <input className="input w-28" name="dueDay" inputMode="numeric" defaultValue={current.lease.dueDay ?? ""} placeholder="theo cơ sở" />
               </div>
-              <button className="btn-secondary">Lưu ngày thu</button>
+              <SubmitButton className="btn-secondary">Lưu ngày thu</SubmitButton>
             </form>
           ) : null}
           <form action={moveOutAction} className="flex flex-wrap items-end gap-2">
@@ -162,7 +163,7 @@ export default async function Page({
               <label className="label">Ngày ở cuối cùng</label>
               <input className="input" type="date" name="lastDay" defaultValue={today()} required />
             </div>
-            <button className="btn-danger">Ghi nhận chuyển đi</button>
+            <SubmitButton className="btn-danger">Ghi nhận chuyển đi</SubmitButton>
           </form>
           <p className="text-xs text-fg-subtle">
             Khi chuyển đi: ghi chỉ số điện nước ngày đó, lập hóa đơn cuối ở màn Tính tiền, rồi quyết toán cọc ngay tại trang này.
@@ -211,7 +212,7 @@ export default async function Page({
             </div>
           </div>
           <p className="text-xs text-fg-subtle">Nhớ ghi chỉ số điện nước ngày vào ở ở trang Chỉ số.</p>
-          <button className="btn">Lưu hợp đồng</button>
+          <SubmitButton>Lưu hợp đồng</SubmitButton>
         </form>
       )}
 
@@ -228,7 +229,7 @@ export default async function Page({
               <label className="label">Tầng (0 = tầng trệt, bỏ trống = suy từ mã)</label>
               <input className="input w-28" name="floor" inputMode="numeric" defaultValue={d.unit.floor ?? ""} />
             </div>
-            <button className="btn-secondary">Lưu tầng</button>
+            <SubmitButton className="btn-secondary">Lưu tầng</SubmitButton>
           </form>
         ) : null}
       </section>
@@ -250,7 +251,7 @@ export default async function Page({
                   <form action={deleteVehicleAction}>
                     {hidden}
                     <input type="hidden" name="vehicleId" value={v.id} />
-                    <button className="btn-danger">Xóa</button>
+                    <SubmitButton className="btn-danger">Xóa</SubmitButton>
                   </form>
                 ) : null}
               </li>
@@ -282,7 +283,7 @@ export default async function Page({
               <label className="label">Ghi chú</label>
               <input className="input" name="note" />
             </div>
-            <button className="btn">Thêm xe</button>
+            <SubmitButton>Thêm xe</SubmitButton>
           </form>
         ) : null}
         <p className="text-xs text-fg-subtle">Xe mới thêm gắn với người đang thuê phòng này (nếu có); phòng trống thì ghi là xe chung của phòng.</p>
@@ -302,6 +303,20 @@ export default async function Page({
                 </li>
               ))}
           </ul>
+        </section>
+      ) : null}
+
+      {actor.role === "owner" && !current ? (
+        <section className="card mt-6 space-y-3">
+          <h2 className="font-semibold">Xóa phòng</h2>
+          <p className="text-sm text-fg-muted">
+            Chỉ xóa được phòng chưa có hợp đồng nào (đang thuê hoặc đã trả), chưa có xe và chưa có chỉ số — các dữ liệu đó là chứng
+            từ, xóa phòng sẽ làm mất dấu.
+          </p>
+          <form action={deleteUnitAction}>
+            {hidden}
+            <SubmitButton className="btn-danger">Xóa phòng này</SubmitButton>
+          </form>
         </section>
       ) : null}
     </>
@@ -376,7 +391,7 @@ async function Settlement(props: { actor: Actor; propertyId: string; unitId: str
                 <option value="other">Khác</option>
               </select>
             </div>
-            <button className="btn-secondary">Đã hoàn {vnd(st.refundDue)}</button>
+            <SubmitButton className="btn-secondary">Đã hoàn {vnd(st.refundDue)}</SubmitButton>
           </form>
         ) : null}
         {actor.role === "owner" && !st.refundedOn ? (
@@ -389,7 +404,7 @@ async function Settlement(props: { actor: Actor; propertyId: string; unitId: str
                 <label className="label">Lý do hủy</label>
                 <input className="input" name="reason" required />
               </div>
-              <button className="btn-danger">Hủy quyết toán</button>
+              <SubmitButton className="btn-danger">Hủy quyết toán</SubmitButton>
             </form>
           </details>
         ) : null}

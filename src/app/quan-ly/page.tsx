@@ -1,4 +1,6 @@
 import Link from "next/link";
+import type { Metadata } from "next";
+import SubmitButton from "@/components/submit-button";
 import { Building2, MapPin, MapPinOff, Plus } from "lucide-react";
 import { ManageHeader } from "@/components/manage-header";
 import { OrgOverview } from "@/components/org-overview";
@@ -10,6 +12,8 @@ import { listArchivedProperties } from "@/server/property-lifecycle";
 import { orgOverview } from "@/server/overview";
 import { listProperties, today } from "@/server/queries";
 import { restorePropertyAction } from "../co-so/actions";
+
+export const metadata: Metadata = { title: "Quản lý khu — KhuMình" };
 
 export const dynamic = "force-dynamic";
 
@@ -98,7 +102,7 @@ export default async function Page({
                   </Link>
                   <form action={restorePropertyAction}>
                     <input type="hidden" name="propertyId" value={p.id} />
-                    <button className="btn-secondary">Khôi phục</button>
+                    <SubmitButton className="btn-secondary">Khôi phục</SubmitButton>
                   </form>
                 </li>
               ))}

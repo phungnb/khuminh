@@ -1,8 +1,10 @@
 import { Badge, Flash, PageTitle } from "@/components/ui";
+import SubmitButton from "@/components/submit-button";
 import { dateTimeVn } from "@/lib/format";
 import { requireActor } from "@/lib/session";
 import { MAINTENANCE_STATUS_LABEL, propertyMaintenanceRequests } from "@/server/maintenance";
-import { updateMaintenanceAction } from "../../actions";
+import { today, unitsOverview } from "@/server/queries";
+import { managerReportIssueAction, updateMaintenanceAction } from "../../actions";
 
 export default async function Page({
   params,
@@ -13,13 +15,41 @@ export default async function Page({
 }) {
   const { id } = await params;
   const actor = await requireActor();
-  const rows = await propertyMaintenanceRequests(actor, id);
+  const [rows, units] = await Promise.all([propertyMaintenanceRequests(actor, id), unitsOverview(actor, id, today())]);
   const open = rows.filter((r) => r.status === "open" || r.status === "in_progress");
   const closed = rows.filter((r) => r.status === "done" || r.status === "rejected");
   return (
     <>
       <PageTitle>Sự cố</PageTitle>
       <Flash params={await searchParams} />
+      <form action={managerReportIssueAction} className="card mb-6 space-y-3">
+        <input type="hidden" name="propertyId" value={id} />
+        <h2 className="font-semibold">Ghi nhận sự cố thay người thuê</h2>
+        <p className="text-sm text-fg-muted">Người thuê gọi điện, nhắn Zalo: chủ nhà ghi lại để theo dõi xử lý.</p>
+        <div>
+          <label className="label" htmlFor="unitId">Phòng</label>
+          <select className="input" id="unitId" name="unitId" required>
+            {units.map((u) => (
+              <option key={u.id} value={u.id}>
+                Phòng {u.code}
+                {u.lease ? ` · ${u.lease.tenantName}` : " · đang trống"}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="label" htmlFor="title">Sự cố</label>
+          <input className="input" id="title" name="title" maxLength={120} placeholder="Vòi nước nhà tắm bị rỉ" required />
+        </div>
+        <div>
+          <label className="label" htmlFor="body">Mô tả thêm (không bắt buộc)</label>
+          <textarea className="input" id="body" name="body" rows={3} maxLength={1000} />
+        </div>
+        <label className="flex items-center gap-2 text-sm">
+          <input type="checkbox" name="urgent" value="1" /> Gấp (mất điện, mất nước, rò rỉ lớn)
+        </label>
+        <SubmitButton className="btn w-full sm:w-auto">Ghi nhận sự cố</SubmitButton>
+      </form>
       {open.length === 0 ? <p className="mb-6 text-sm text-fg-subtle">Không có sự cố nào đang chờ.</p> : null}
       <ul className="space-y-3">
         {open.map((r) => (
@@ -36,9 +66,9 @@ export default async function Page({
               <input type="hidden" name="propertyId" value={id} />
               <input type="hidden" name="requestId" value={r.id} />
               <input className="input min-w-48 flex-1" name="note" maxLength={1000} placeholder="Ghi chú cho người thuê (bắt buộc khi từ chối)" />
-              {r.status === "open" ? <button className="btn-secondary" name="status" value="in_progress">Nhận xử lý</button> : null}
-              <button className="btn" name="status" value="done">Đã xong</button>
-              <button className="btn-danger" name="status" value="rejected">Từ chối</button>
+              {r.status === "open" ? <SubmitButton className="btn-secondary" name="status" value="in_progress">Nhận xử lý</SubmitButton> : null}
+              <SubmitButton name="status" value="done">Đã xong</SubmitButton>
+              <SubmitButton className="btn-danger" name="status" value="rejected">Từ chối</SubmitButton>
             </form>
           </li>
         ))}

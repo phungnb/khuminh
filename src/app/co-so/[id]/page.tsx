@@ -1,4 +1,5 @@
 import { AlarmClock, BadgeCheck, Calculator, CircleCheck, CircleDollarSign, Circle, DoorOpen, Gauge, House, MapPinOff, TriangleAlert, Users, Wrench } from "lucide-react";
+import SubmitButton from "@/components/submit-button";
 import Link from "next/link";
 import { CoSoWall } from "@/components/co-so-wall";
 import { ActionList } from "@/components/org-overview";
@@ -109,7 +110,7 @@ export default async function Page({
                   <form action={deleteExpenseAction}>
                     <input type="hidden" name="propertyId" value={id} />
                     <input type="hidden" name="expenseId" value={e.id} />
-                    <button className="btn-danger">Xóa</button>
+                    <SubmitButton className="btn-danger">Xóa</SubmitButton>
                   </form>
                 ) : null}
               </li>
@@ -143,7 +144,7 @@ export default async function Page({
               <label className="label">Ghi chú</label>
               <input className="input" name="note" />
             </div>
-            <button className="btn">Ghi khoản chi</button>
+            <SubmitButton>Ghi khoản chi</SubmitButton>
           </form>
         ) : null}
       </section>

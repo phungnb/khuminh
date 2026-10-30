@@ -5,14 +5,13 @@ import { supportContact } from "@/lib/support";
 
 export const metadata: Metadata = { title: "Điều khoản sử dụng — KhuMình" };
 
-// BẢN NHÁP: nội dung cần chủ dự án duyệt trước khi coi là chính thức.
 export default function Page() {
   const support = supportContact();
   return (
     <main className="prose-sm mx-auto max-w-2xl space-y-4 px-4 py-10 text-sm leading-relaxed">
       <Link href="/" className="inline-block"><Logo /></Link>
       <h1 className="text-2xl font-bold">Điều khoản sử dụng</h1>
-      <p className="text-fg-subtle">Bản nháp ngày 14/10/2026.</p>
+      <p className="text-fg-subtle">Cập nhật ngày 30/10/2026.</p>
 
       <h2 className="font-semibold">1. KhuMình làm gì</h2>
       <p>

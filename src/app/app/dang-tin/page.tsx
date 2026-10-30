@@ -1,4 +1,5 @@
 import { Gift, HandCoins, MapPinOff, Search, ShieldCheck, Wrench, type LucideIcon } from "lucide-react";
+import SubmitButton from "@/components/submit-button";
 import Link from "next/link";
 import { CategoryTile } from "@/components/category";
 import { ListingPhotoPicker } from "@/components/listing-photo-picker";
@@ -35,7 +36,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ l
   }
   return (
     <>
-      <BackLink href="/app">Chợ</BackLink>
+      <BackLink href="/app/quanh-day">Chợ</BackLink>
       <PageTitle>Đăng tin</PageTitle>
       <Flash params={sp} />
       <form action={createListingAction} className="card space-y-4">
@@ -110,7 +111,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ l
           <ShieldCheck className="size-4 shrink-0 text-brand" />
           Liên hệ chỉ hiện cho người bạn đồng ý. Tin hiện vị trí gần đúng theo khu (khoảng 500 m), không hiện số phòng. Tin hiển thị 30 ngày; sắp hết hạn thì vào “Chợ của tôi” bấm Gia hạn, bán xong thì bấm Đóng tin.
         </p>
-        <button className="btn w-full">Đăng tin</button>
+        <SubmitButton className="btn w-full">Đăng tin</SubmitButton>
       </form>
     </>
   );

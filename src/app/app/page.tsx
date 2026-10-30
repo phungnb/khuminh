@@ -186,7 +186,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Sp>
           <ul className="card divide-y divide-border p-0">
             {fresh.map((l) => (
               <li key={l.id}>
-                <Link href={`/app/tin/${l.id}?o=${encodeURIComponent(place.key)}`} className="flex items-center gap-3 px-4 py-3 hover:bg-surface-2">
+                <Link href={`/app/tin/${l.id}?o=${encodeURIComponent(place.key)}&r=${radius}`} className="flex items-center gap-3 px-4 py-3 hover:bg-surface-2">
                   <span className="grid size-9 shrink-0 place-items-center rounded-full bg-surface-2 text-sm font-bold">
                     {l.authorName.charAt(0).toUpperCase()}
                   </span>
@@ -206,7 +206,9 @@ export default async function Page({ searchParams }: { searchParams: Promise<Sp>
       ) : null}
 
       <div className="mt-6 mb-2 flex items-baseline justify-between">
-        <h2 className="text-lg font-semibold">Quanh bạn {radius} km</h2>
+        <h2 className="text-lg font-semibold">
+          <Link href="/app/quanh-day">Quanh bạn {radius} km</Link>
+        </h2>
         {place ? (
           <Link href="/app/quanh-day" className="text-sm font-medium text-brand-ink">
             Xem tất cả
@@ -231,7 +233,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Sp>
           }
         />
       ) : nearby.length > 0 ? (
-        <ListingGrid items={nearby} query={`?o=${encodeURIComponent(place.key)}`} />
+        <ListingGrid items={nearby} query={`?o=${encodeURIComponent(place.key)}&r=${radius}`} />
       ) : (
         <p className="text-sm text-fg-muted">Các tin quanh bạn đều mới đăng hôm nay, xem ở trên.</p>
       )}
