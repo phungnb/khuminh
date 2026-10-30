@@ -44,7 +44,10 @@ export interface UnitOverview {
   id: string;
   code: string;
   block: string | null;
+  floor: number | null;
   status: string;
+  /** Có hóa đơn đã phát hành quá hạn chưa thu đủ (tính tới ngày `on`). */
+  overdue: boolean;
   lease: { id: string; tenantName: string; phone: string | null; startDate: string; expiresOn: string | null; rent: number; occupants: number } | null;
 }
 
@@ -71,13 +74,26 @@ export async function unitsOverview(actor: Actor, propertyId: string, on: IsoDat
           .where(and(inArray(s.leaseRents.leaseId, leaseRows.map((l) => l.lease.id)), lte(s.leaseRents.effectiveFrom, on)))
           .orderBy(desc(s.leaseRents.effectiveFrom))
       : [];
+    // Phòng nợ: hợp đồng của phòng có hóa đơn đã phát hành quá hạn chưa thu đủ.
+    const overdueUnitIds = new Set<string>();
+    if (leaseRows.length) {
+      const rows = (await tx.execute(sql`
+        select distinct i.unit_id as unit_id from invoices i
+        where i.lease_id in (${sql.join(leaseRows.map((l) => sql`${l.lease.id}::uuid`), sql`, `)})
+          and i.status = 'issued' and i.due_date < ${on}
+          and i.total > coalesce((select sum(a.amount) from payment_allocations a where a.invoice_id = i.id), 0)
+      `)) as unknown as Array<{ unit_id: string }>;
+      for (const r of rows) overdueUnitIds.add(r.unit_id);
+    }
     return unitRows.map((u) => {
       const l = leaseRows.find((r) => r.lease.unitId === u.id);
       return {
         id: u.id,
         code: u.code,
         block: u.block,
+        floor: u.floor,
         status: u.status,
+        overdue: overdueUnitIds.has(u.id),
         lease: l
           ? {
               id: l.lease.id,

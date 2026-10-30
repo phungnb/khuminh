@@ -12,7 +12,9 @@ import { addDays } from "@/domain/dates";
 import type { Actor } from "@/server/audit";
 import { SETTLE_WITHIN_DAYS } from "@/server/overview-items";
 import { settlementContext } from "@/server/deposit";
-import { changeRentAction, createLeaseAction, createTenantInviteAction, extendLeaseAction, moveOutAction, setLeaseDueDayAction } from "../../../actions";
+import { changeRentAction, createLeaseAction, createTenantInviteAction, extendLeaseAction, moveOutAction, setLeaseDueDayAction, addVehicleAction, deleteVehicleAction, setUnitFloorAction } from "../../../actions";
+import { deriveFloor, floorLabel } from "@/domain/rooms";
+import { listVehicles, VEHICLE_KINDS } from "@/server/vehicles";
 import { markRefundedAction, voidSettlementAction } from "../../../deposit-actions";
 
 export default async function Page({
@@ -36,6 +38,7 @@ export default async function Page({
       <input type="hidden" name="unitId" value={unitId} />
     </>
   );
+  const vehicles = await listVehicles(actor, unitId);
 
   return (
     <>
@@ -211,6 +214,79 @@ export default async function Page({
           <button className="btn">Lưu hợp đồng</button>
         </form>
       )}
+
+      <section className="card mt-6 space-y-3">
+        <h2 className="font-semibold">Tầng</h2>
+        <p className="text-sm text-fg-muted">
+          Sơ đồ đang xếp phòng này ở: {floorLabel(deriveFloor(d.unit.code, d.unit.floor))}
+          {d.unit.floor === null ? " (suy từ mã phòng)" : ""}.
+        </p>
+        {actor.role === "owner" ? (
+          <form action={setUnitFloorAction} className="flex flex-wrap items-end gap-2">
+            {hidden}
+            <div>
+              <label className="label">Tầng (0 = tầng trệt, bỏ trống = suy từ mã)</label>
+              <input className="input w-28" name="floor" inputMode="numeric" defaultValue={d.unit.floor ?? ""} />
+            </div>
+            <button className="btn-secondary">Lưu tầng</button>
+          </form>
+        ) : null}
+      </section>
+
+      <section className="card mt-6 space-y-3">
+        <h2 className="font-semibold">Xe của phòng</h2>
+        {vehicles.length === 0 ? (
+          <p className="text-sm text-fg-muted">Chưa ghi xe nào cho phòng này.</p>
+        ) : (
+          <ul className="space-y-2 text-sm">
+            {vehicles.map((v) => (
+              <li key={v.id} className="flex flex-wrap items-center justify-between gap-2">
+                <span>
+                  <strong>{v.plate}</strong> · {v.kind}
+                  {v.monthlyFee > 0 ? ` · vé tháng ${vnd(v.monthlyFee)}` : ""}
+                  {v.note ? ` · ${v.note}` : ""}
+                </span>
+                {actor.role === "owner" ? (
+                  <form action={deleteVehicleAction}>
+                    {hidden}
+                    <input type="hidden" name="vehicleId" value={v.id} />
+                    <button className="btn-danger">Xóa</button>
+                  </form>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        )}
+        {actor.role === "owner" ? (
+          <form action={addVehicleAction} className="flex flex-wrap items-end gap-2">
+            {hidden}
+            <div>
+              <label className="label">Biển số</label>
+              <input className="input" name="plate" required />
+            </div>
+            <div>
+              <label className="label">Loại xe</label>
+              <select className="input" name="kind" defaultValue={VEHICLE_KINDS[0]}>
+                {VEHICLE_KINDS.map((k) => (
+                  <option key={k} value={k}>
+                    {k}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="label">Phí vé tháng</label>
+              <input className="input" name="monthlyFee" inputMode="numeric" defaultValue="0" />
+            </div>
+            <div>
+              <label className="label">Ghi chú</label>
+              <input className="input" name="note" />
+            </div>
+            <button className="btn">Thêm xe</button>
+          </form>
+        ) : null}
+        <p className="text-xs text-fg-subtle">Xe mới thêm gắn với người đang thuê phòng này (nếu có); phòng trống thì ghi là xe chung của phòng.</p>
+      </section>
 
       {current && ended ? <Settlement actor={actor} propertyId={id} unitId={unitId} leaseId={ended.lease.id} hideWhenDone /> : null}
 
