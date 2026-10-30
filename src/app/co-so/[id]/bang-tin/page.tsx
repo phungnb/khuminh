@@ -1,4 +1,5 @@
 import { PostList } from "@/components/post-list";
+import SubmitButton from "@/components/submit-button";
 import { Flash, PageTitle } from "@/components/ui";
 import { requireActor } from "@/lib/session";
 import { listPosts, managerBoardViewer } from "@/server/board";
@@ -31,7 +32,7 @@ export default async function Page({
           <textarea className="input" id="body" name="body" rows={3} maxLength={2000} />
         </div>
         <p className="text-xs text-fg-subtle">Người thuê đã cài app và bật thông báo sẽ nhận ngay trên điện thoại.</p>
-        <button className="btn">Đăng</button>
+        <SubmitButton>Đăng</SubmitButton>
       </form>
       <PostList
         posts={posts}
@@ -40,7 +41,7 @@ export default async function Page({
             <form action={hidePostAction}>
               <input type="hidden" name="propertyId" value={id} />
               <input type="hidden" name="postId" value={p.id} />
-              <button className="btn-danger">Ẩn tin</button>
+              <SubmitButton className="btn-danger">Ẩn tin</SubmitButton>
             </form>
           )
         }

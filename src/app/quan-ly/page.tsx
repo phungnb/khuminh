@@ -1,4 +1,5 @@
 import Link from "next/link";
+import SubmitButton from "@/components/submit-button";
 import { Building2, MapPin, MapPinOff, Plus } from "lucide-react";
 import { ManageHeader } from "@/components/manage-header";
 import { OrgOverview } from "@/components/org-overview";
@@ -98,7 +99,7 @@ export default async function Page({
                   </Link>
                   <form action={restorePropertyAction}>
                     <input type="hidden" name="propertyId" value={p.id} />
-                    <button className="btn-secondary">Khôi phục</button>
+                    <SubmitButton className="btn-secondary">Khôi phục</SubmitButton>
                   </form>
                 </li>
               ))}

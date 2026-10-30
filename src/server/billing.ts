@@ -48,6 +48,17 @@ function invoiceCode(periodStart: IsoDate, unitCode: string, leaseId: string): s
 }
 
 /**
+ * Mã mới cho hóa đơn đã hủy: giữ nguyên mã gốc + hậu tố HUY + mảnh id.
+ * Mã hóa đơn là duy nhất theo cơ sở (invoices_code) nên hóa đơn đã hủy phải
+ * nhường mã thì mới lập lại được nháp cùng kỳ. Hậu tố dùng mảnh id để hủy →
+ * lập lại → hủy nhiều vòng cũng không đụng mã của lần hủy trước (mã gốc chỉ
+ * gồm hex nên không bao giờ tự kết thúc bằng "-HUY-...").
+ */
+function freedCodeForVoid(code: string, invoiceId: string): string {
+  return `${code}-HUY-${invoiceId.slice(0, 8).toUpperCase()}`;
+}
+
+/**
  * Lập (hoặc lập lại) hóa đơn nháp cho mọi hợp đồng có ngày ở trong kỳ.
  * Hóa đơn đã phát hành không bị đụng tới. Hợp đồng còn lỗi (thiếu chỉ số...) không tạo nháp.
  */
@@ -91,10 +102,12 @@ export async function generateDrafts(actor: Actor, periodId: string): Promise<Dr
           ),
         ),
       tx.select().from(meters).where(and(inArray(meters.unitId, unitIds), sql`${meters.archivedAt} is null`)),
+      // Lấy cả hóa đơn đã hủy: hóa đơn hủy từ trước bản sửa này vẫn giữ mã gốc
+      // nên phải đổi mã của nó trước khi chèn nháp mới (xem bên dưới).
       tx
-        .select({ id: invoices.id, leaseId: invoices.leaseId, status: invoices.status })
+        .select({ id: invoices.id, leaseId: invoices.leaseId, status: invoices.status, code: invoices.code })
         .from(invoices)
-        .where(and(eq(invoices.billingPeriodId, period.id), ne(invoices.status, "void"))),
+        .where(eq(invoices.billingPeriodId, period.id)),
     ]);
     const meterIds = meterRows.map((m) => m.id);
     const readings = meterIds.length
@@ -127,7 +140,9 @@ export async function generateDrafts(actor: Actor, periodId: string): Promise<Dr
     const results: DraftResult[] = [];
     for (const lease of leaseRows) {
       const unit = unitRows.find((u) => u.id === lease.unitId)!;
-      const prior = existing.find((e) => e.leaseId === lease.id);
+      const priors = existing.filter((e) => e.leaseId === lease.id);
+      // Ưu tiên hóa đơn còn hiệu lực; chỉ khi không còn mới đụng tới hóa đơn đã hủy.
+      const prior = priors.find((e) => e.status !== "void") ?? priors[0];
       if (prior?.status === "issued") {
         results.push({ leaseId: lease.id, unitCode: unit.code, invoiceId: prior.id, total: null, errors: [], skipped: "already_issued" });
         continue;
@@ -153,10 +168,23 @@ export async function generateDrafts(actor: Actor, periodId: string): Promise<Dr
         roundTotalTo: property.roundTotalTo,
       });
 
-      if (prior) await tx.delete(invoices).where(eq(invoices.id, prior.id));
+      // Chỉ xóa nháp cũ để lập lại; hóa đơn đã hủy được giữ lại làm chứng từ,
+      // chỉ đổi mã của nó (bên dưới) để nhường mã cho nháp mới.
+      if (prior?.status === "draft") await tx.delete(invoices).where(eq(invoices.id, prior.id));
       if (result.errors.length || !result.segment) {
         results.push({ leaseId: lease.id, unitCode: unit.code, invoiceId: null, total: null, errors: result.errors });
         continue;
+      }
+
+      // Hóa đơn đã hủy từ trước bản sửa này vẫn giữ mã gốc: đổi mã của nó
+      // (chỉ đúng cái đang giữ mã mà nháp mới sắp dùng) rồi mới chèn.
+      const newCode = invoiceCode(period.periodStart, unit.code, lease.id);
+      const colliding = priors.find((e) => e.status === "void" && e.code === newCode);
+      if (colliding) {
+        await tx
+          .update(invoices)
+          .set({ code: freedCodeForVoid(colliding.code, colliding.id) })
+          .where(eq(invoices.id, colliding.id));
       }
 
       const [inv] = await tx
@@ -167,7 +195,7 @@ export async function generateDrafts(actor: Actor, periodId: string): Promise<Dr
           unitId: unit.id,
           leaseId: lease.id,
           billingPeriodId: period.id,
-          code: invoiceCode(period.periodStart, unit.code, lease.id),
+          code: newCode,
           status: "draft",
           subtotal: result.total,
           total: result.total,
@@ -266,7 +294,10 @@ export async function voidInvoice(actor: Actor, invoiceId: string, reason: strin
     if (inv.status === "void") return;
     const alloc = await tx.select({ id: paymentAllocations.id }).from(paymentAllocations).where(eq(paymentAllocations.invoiceId, invoiceId)).limit(1);
     if (alloc.length) throw new UserError("Hóa đơn đã có thanh toán; hủy thanh toán trước");
-    await tx.update(invoices).set({ status: "void", voidReason: reason.trim() }).where(eq(invoices.id, invoiceId));
-    await audit(tx, actor, "invoice.void", "invoice", invoiceId, { status: inv.status }, { status: "void", reason });
+    // Nhường mã cho lần lập lại sau: mã hóa đơn duy nhất theo cơ sở nên nếu
+    // giữ mã gốc thì "Lập nháp cả kỳ" sẽ lỗi unique (đã gặp live 30/10/2026).
+    const freedCode = freedCodeForVoid(inv.code, invoiceId);
+    await tx.update(invoices).set({ status: "void", voidReason: reason.trim(), code: freedCode }).where(eq(invoices.id, invoiceId));
+    await audit(tx, actor, "invoice.void", "invoice", invoiceId, { status: inv.status, code: inv.code }, { status: "void", reason, code: freedCode });
   });
 }

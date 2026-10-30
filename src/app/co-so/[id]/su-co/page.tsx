@@ -1,4 +1,5 @@
 import { Badge, Flash, PageTitle } from "@/components/ui";
+import SubmitButton from "@/components/submit-button";
 import { dateTimeVn } from "@/lib/format";
 import { requireActor } from "@/lib/session";
 import { MAINTENANCE_STATUS_LABEL, propertyMaintenanceRequests } from "@/server/maintenance";
@@ -36,9 +37,9 @@ export default async function Page({
               <input type="hidden" name="propertyId" value={id} />
               <input type="hidden" name="requestId" value={r.id} />
               <input className="input min-w-48 flex-1" name="note" maxLength={1000} placeholder="Ghi chú cho người thuê (bắt buộc khi từ chối)" />
-              {r.status === "open" ? <button className="btn-secondary" name="status" value="in_progress">Nhận xử lý</button> : null}
-              <button className="btn" name="status" value="done">Đã xong</button>
-              <button className="btn-danger" name="status" value="rejected">Từ chối</button>
+              {r.status === "open" ? <SubmitButton className="btn-secondary" name="status" value="in_progress">Nhận xử lý</SubmitButton> : null}
+              <SubmitButton name="status" value="done">Đã xong</SubmitButton>
+              <SubmitButton className="btn-danger" name="status" value="rejected">Từ chối</SubmitButton>
             </form>
           </li>
         ))}

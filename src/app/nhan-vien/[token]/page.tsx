@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import SubmitButton from "@/components/submit-button";
 import Link from "next/link";
 import { AuthShell, EmptyState, Flash } from "@/components/ui";
 import { LinkIcon } from "lucide-react";
@@ -54,7 +55,7 @@ export default async function Page({
           <input className="input" id="password" name="password" type="password" autoComplete="new-password" minLength={8} required />
         </div>
         <p className="text-xs text-fg-subtle">Đã có tài khoản KhuMình với email này thì nhập mật khẩu cũ, không cần tên.</p>
-        <button className="btn w-full">Nhận lời mời</button>
+        <SubmitButton className="btn w-full">Nhận lời mời</SubmitButton>
       </form>
     </AuthShell>
   );

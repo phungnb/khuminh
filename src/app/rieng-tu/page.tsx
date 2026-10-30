@@ -18,7 +18,7 @@ export default function Page() {
       <ul className="list-disc space-y-1 pl-5">
         <li>Tài khoản: tên hiển thị, email (chủ trọ) hoặc số điện thoại (người thuê), mật khẩu dạng đã băm (không ai đọc được mật khẩu gốc).</li>
         <li>Do chủ trọ nhập: họ tên, số điện thoại người thuê, phòng, hợp đồng, tiền cọc, chỉ số điện nước, hóa đơn, thanh toán.</li>
-        <li>Chợ: tin đăng, liên hệ bạn tự nhập, vị trí của khu trọ đã làm tròn khoảng 500 m. Không lấy GPS điện thoại.</li>
+        <li>Chợ: tin đăng, liên hệ bạn tự nhập, vị trí của khu trọ đã làm tròn khoảng 500 m. App không tự lấy vị trí điện thoại; chỉ khi bạn bấm “Dùng vị trí của tôi” thì trình duyệt mới chia sẻ vị trí một lần để đặt ghim.</li>
         <li>Thông báo đẩy: địa chỉ nhận thông báo của trình duyệt, nếu bạn bật.</li>
         <li>Nhật ký thao tác liên quan tới tiền (lập, sửa, hủy hóa đơn và thanh toán) để đối soát.</li>
       </ul>

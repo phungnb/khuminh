@@ -1,4 +1,5 @@
 import Link from "next/link";
+import SubmitButton from "@/components/submit-button";
 import { LegalFooter } from "@/components/legal-note";
 import { AuthShell, Flash } from "@/components/ui";
 import { supportContact } from "@/lib/support";
@@ -18,7 +19,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ l
           <label className="label" htmlFor="password">Mật khẩu</label>
           <input className="input" id="password" name="password" type="password" autoComplete="current-password" required />
         </div>
-        <button className="btn w-full">Đăng nhập</button>
+        <SubmitButton className="btn w-full">Đăng nhập</SubmitButton>
       </form>
       <p className="mt-4 text-center text-sm">
         Chưa có tài khoản? <Link className="font-semibold text-brand-ink" href="/dang-ky">Đăng ký miễn phí</Link>

@@ -1,4 +1,5 @@
 import { BackLink, Flash, PageTitle } from "@/components/ui";
+import SubmitButton from "@/components/submit-button";
 import { requireActor } from "@/lib/session";
 import { createPropertyAction } from "../actions";
 import { PropertyFields } from "../property-fields";
@@ -13,7 +14,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ l
       <Flash params={sp} />
       <form action={createPropertyAction} className="card space-y-3">
         <PropertyFields />
-        <button className="btn w-full">Tạo cơ sở</button>
+        <SubmitButton className="btn w-full">Tạo cơ sở</SubmitButton>
       </form>
     </main>
   );

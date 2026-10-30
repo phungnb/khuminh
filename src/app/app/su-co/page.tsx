@@ -1,4 +1,5 @@
 import { Wrench } from "lucide-react";
+import SubmitButton from "@/components/submit-button";
 import { Badge, EmptyState, Flash } from "@/components/ui";
 import { dateTimeVn } from "@/lib/format";
 import { requireUser } from "@/lib/session";
@@ -52,7 +53,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ l
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" name="urgent" value="1" /> Gấp (mất điện, mất nước, rò rỉ lớn)
           </label>
-          <button className="btn w-full">Gửi chủ nhà</button>
+          <SubmitButton className="btn w-full">Gửi chủ nhà</SubmitButton>
         </form>
       ) : null}
       <h2 className="mb-2 text-sm font-semibold text-fg-subtle">Đã báo</h2>

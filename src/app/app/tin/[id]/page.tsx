@@ -1,4 +1,5 @@
 import Link from "next/link";
+import SubmitButton from "@/components/submit-button";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Clock, Flag, MapPin, Phone, Tag } from "lucide-react";
 import { CategoryTile } from "@/components/category";
@@ -109,17 +110,17 @@ export default async function Page({
                   <form action={renewListingAction}>
                     {hidden}
                     <input type="hidden" name="back" value={`/app/tin/${l.id}`} />
-                    <button className="btn">Gia hạn 30 ngày</button>
+                    <SubmitButton>Gia hạn 30 ngày</SubmitButton>
                   </form>
                 ) : null}
                 <form action={markSoldListingAction}>
                   {hidden}
                   <input type="hidden" name="back" value={`/app/tin/${l.id}`} />
-                  <button className="btn">Đã bán</button>
+                  <SubmitButton>Đã bán</SubmitButton>
                 </form>
                 <form action={closeListingAction}>
                   {hidden}
-                  <button className="btn-secondary">Đóng tin</button>
+                  <SubmitButton className="btn-secondary">Đóng tin</SubmitButton>
                 </form>
               </div>
             ) : null}
@@ -155,7 +156,7 @@ export default async function Page({
                 {hidden}
                 <input type="hidden" name="back" value={`/app/tin/${l.id}`} />
                 <ListingPhotoPicker max={MAX_LISTING_PHOTOS - l.imageIds.length} />
-                <button className="btn-secondary">Thêm ảnh đã chọn</button>
+                <SubmitButton className="btn-secondary">Thêm ảnh đã chọn</SubmitButton>
               </form>
             ) : null}
           </div>
@@ -180,13 +181,13 @@ export default async function Page({
                     {hidden}
                     <input type="hidden" name="interestId" value={i.id} />
                     <input type="hidden" name="decision" value="accept" />
-                    <button className="btn">Đồng ý chia sẻ SĐT</button>
+                    <SubmitButton>Đồng ý chia sẻ SĐT</SubmitButton>
                   </form>
                   <form action={decideInterestAction}>
                     {hidden}
                     <input type="hidden" name="interestId" value={i.id} />
                     <input type="hidden" name="decision" value="decline" />
-                    <button className="btn-secondary">Từ chối</button>
+                    <SubmitButton className="btn-secondary">Từ chối</SubmitButton>
                   </form>
                 </div>
               ) : null}
@@ -216,7 +217,7 @@ export default async function Page({
               <form action={reportListingAction} className="card mt-2 space-y-2">
                 {hidden}
                 <input className="input" name="reason" required minLength={3} maxLength={300} placeholder="Lừa đảo, hàng cấm, spam…" />
-                <button className="btn-danger">Gửi báo cáo</button>
+                <SubmitButton className="btn-danger">Gửi báo cáo</SubmitButton>
               </form>
             </details>
           )}

@@ -1,5 +1,7 @@
 import { notFound } from "next/navigation";
+import SubmitButton from "@/components/submit-button";
 import { CopyBox } from "@/components/copy-box";
+import LocationPicker from "@/components/location-picker";
 import { Flash, PageTitle } from "@/components/ui";
 import { dmy, vnd } from "@/lib/format";
 import { requireActor } from "@/lib/session";
@@ -122,14 +124,14 @@ export default async function Page({
             <input type="checkbox" name="prorate" defaultChecked /> Chia theo ngày khi ở không trọn kỳ
           </label>
         </div>
-        <button className="btn">Lưu khoản phí</button>
+        <SubmitButton>Lưu khoản phí</SubmitButton>
       </form>
 
       <form action={updatePropertyAction} className="card mt-6 space-y-3">
         <input type="hidden" name="propertyId" value={id} />
         <h2 className="font-semibold">Thông tin cơ sở</h2>
         <PropertyFields v={property} />
-        <button className="btn">Lưu</button>
+        <SubmitButton>Lưu</SubmitButton>
       </form>
 
       <form id="vi-tri" action={setLocationAction} className="card mt-6 space-y-3">
@@ -137,19 +139,10 @@ export default async function Page({
         <h2 className="font-semibold">Vị trí cơ sở cho Chợ quanh đây</h2>
         <p className="text-sm text-fg-muted">
           Cư dân của cơ sở xem và đăng tin trong bán kính quanh vị trí này. Tin đăng chỉ hiện vị trí gần đúng (khoảng 500 m).
-          Mở Google Maps, giữ ngón tay lên vị trí cơ sở rồi sao chép tọa độ, hoặc dán link đầy đủ.
+          Tìm địa chỉ, bấm “Dùng vị trí của tôi”, hoặc chạm vào bản đồ để đặt ghim.
         </p>
-        <div>
-          <label className="label" htmlFor="location">Tọa độ hoặc link Google Maps</label>
-          <input
-            className="input"
-            id="location"
-            name="location"
-            placeholder="10.7731, 106.6991"
-            defaultValue={property.lat !== null && property.lng !== null ? `${property.lat}, ${property.lng}` : ""}
-          />
-        </div>
-        <button className="btn">Lưu vị trí</button>
+        <LocationPicker defaultLat={property.lat} defaultLng={property.lng} />
+        <SubmitButton>Lưu vị trí</SubmitButton>
       </form>
 
       {actor.role === "owner" ? (
@@ -168,7 +161,7 @@ export default async function Page({
                   <form action={removeStaffAction}>
                     <input type="hidden" name="propertyId" value={id} />
                     <input type="hidden" name="userId" value={m.userId} />
-                    <button className="btn-danger">Bỏ</button>
+                    <SubmitButton className="btn-danger">Bỏ</SubmitButton>
                   </form>
                 </li>
               ))}
@@ -182,7 +175,7 @@ export default async function Page({
           ) : (
             <form action={createStaffInviteAction}>
               <input type="hidden" name="propertyId" value={id} />
-              <button className="btn-secondary">Tạo link mời nhân viên</button>
+              <SubmitButton className="btn-secondary">Tạo link mời nhân viên</SubmitButton>
             </form>
           )}
         </section>
@@ -196,7 +189,7 @@ export default async function Page({
               <p className="text-sm text-fg-muted">Khu đang được lưu trữ: ẩn khỏi danh sách, chợ và Hôm nay. Dữ liệu vẫn giữ nguyên.</p>
               <form action={restorePropertyAction}>
                 <input type="hidden" name="propertyId" value={id} />
-                <button className="btn">Khôi phục khu</button>
+                <SubmitButton>Khôi phục khu</SubmitButton>
               </form>
             </>
           ) : isDraft(usage) ? (
@@ -212,7 +205,7 @@ export default async function Page({
                 </label>
                 <input className="input" id="confirmName" name="confirmName" autoComplete="off" required />
               </div>
-              <button className="btn-danger">Xóa hẳn khu</button>
+              <SubmitButton className="btn-danger">Xóa hẳn khu</SubmitButton>
             </form>
           ) : (
             <form action={archivePropertyAction} className="space-y-3">
@@ -222,9 +215,9 @@ export default async function Page({
                 sẽ ẩn khu khỏi danh sách, chợ và Hôm nay; khôi phục được bất cứ lúc nào.
                 {usage.activeLeases > 0 ? ` Hiện còn ${usage.activeLeases} hợp đồng đang thuê, cần ghi nhận chuyển đi trước.` : ""}
               </p>
-              <button className="btn-danger" disabled={usage.activeLeases > 0}>
+              <SubmitButton className="btn-danger" disabled={usage.activeLeases> 0}>
                 Lưu trữ khu
-              </button>
+              </SubmitButton>
             </form>
           )}
         </section>

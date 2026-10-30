@@ -3,6 +3,7 @@
 // Form trả phòng – quyết toán cọc (KM-COC): nhập → Xem trước (không ghi) → Xác nhận ghi đúng bộ số vừa xem.
 
 import { startTransition, useActionState, useState } from "react";
+import SubmitButton from "@/components/submit-button";
 import { previewSettlementAction, settleDepositAction, type PreviewState } from "@/app/co-so/deposit-actions";
 import { vnd } from "@/lib/format";
 
@@ -81,7 +82,7 @@ export function SettlementForm(props: {
           <label className="label">Ghi chú</label>
           <input className="input" name="note" />
         </div>
-        <button className="btn-secondary" disabled={pending}>{pending ? "Đang tính…" : "Xem trước"}</button>
+        <SubmitButton className="btn-secondary" disabled={pending}>{pending ? "Đang tính…" : "Xem trước"}</SubmitButton>
       </form>
 
       {state?.error ? <p className="text-sm text-danger">{state.error}</p> : null}
@@ -105,7 +106,7 @@ export function SettlementForm(props: {
             <input type="hidden" name="propertyId" value={props.propertyId} />
             <input type="hidden" name="unitId" value={props.unitId} />
             <input type="hidden" name="key" value={state.key} />
-            <button className="btn">Xác nhận quyết toán</button>
+            <SubmitButton>Xác nhận quyết toán</SubmitButton>
             <p className="mt-1 text-xs text-fg-subtle">Ghi điều chỉnh vào hóa đơn cuối và cấn trừ cọc. Làm nhầm thì hủy được khi chưa hoàn tiền.</p>
           </form>
         </div>
