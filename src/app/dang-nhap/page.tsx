@@ -1,15 +1,20 @@
 import Link from "next/link";
 import SubmitButton from "@/components/submit-button";
+import { SearchFlash } from "@/components/search-flash";
 import { LegalFooter } from "@/components/legal-note";
-import { AuthShell, Flash } from "@/components/ui";
+import { AuthShell } from "@/components/ui";
 import { supportContact } from "@/lib/support";
 import { loginAction } from "../auth-actions";
 
-export default async function Page({ searchParams }: { searchParams: Promise<{ loi?: string; ok?: string }> }) {
-  const sp = await searchParams;
+// Trang form tĩnh: không đọc dữ liệu server, thông báo ?loi=/?ok= đọc phía
+// client (SearchFlash) nên trang được lưu sẵn trên CDN, bấm vào mở ngay mà
+// không chờ hàm server khởi động.
+export const dynamic = "force-static";
+
+export default function Page() {
   return (
     <AuthShell title="Đăng nhập" subtitle="Chợ tiện ích quanh nhà. Người thuê đăng nhập bằng số điện thoại, chủ trọ bằng email.">
-      <Flash params={sp} />
+      <SearchFlash />
       <form action={loginAction} className="card space-y-3">
         <div>
           <label className="label" htmlFor="email">Email hoặc số điện thoại</label>

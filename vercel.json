@@ -1,0 +1,7 @@
+{
+  // Hàm chạy cùng vùng với cơ sở dữ liệu Neon (Singapore, ap-southeast-1) để
+  // mỗi câu truy vấn không phải đi Mỹ - Singapore (~200ms/lần). Vercel mặc
+  // định chạy hàm ở iad1 (Mỹ); mỗi trang chạy nhiều câu truy vấn nối tiếp
+  // nên độ trễ cộng dồn thành vài giây. Chỉ dùng 1 vùng (gói miễn phí).
+  "regions": ["sin1"]
+}

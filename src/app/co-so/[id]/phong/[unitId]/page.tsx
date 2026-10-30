@@ -28,7 +28,8 @@ export default async function Page({
   const { id, unitId } = await params;
   const sp = await searchParams;
   const actor = await requireActor();
-  const d = await unitDetail(actor, unitId);
+  // Chi tiết phòng và xe của phòng không phụ thuộc nhau nên đọc song song.
+  const [d, vehicles] = await Promise.all([unitDetail(actor, unitId), listVehicles(actor, unitId)]);
   if (!d || d.unit.propertyId !== id) notFound();
   const current = d.leases.find((l) => l.lease.status === "active" && !l.lease.movedOutOn);
   // Hợp đồng vừa trả phòng gần nhất: hiện quyết toán cọc kể cả khi phòng đã có người mới.
@@ -39,7 +40,6 @@ export default async function Page({
       <input type="hidden" name="unitId" value={unitId} />
     </>
   );
-  const vehicles = await listVehicles(actor, unitId);
 
   return (
     <>

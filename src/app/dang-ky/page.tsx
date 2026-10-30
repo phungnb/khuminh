@@ -1,14 +1,18 @@
 import Link from "next/link";
 import SubmitButton from "@/components/submit-button";
+import { SearchFlash } from "@/components/search-flash";
 import { LegalNote } from "@/components/legal-note";
-import { AuthShell, Flash } from "@/components/ui";
+import { AuthShell } from "@/components/ui";
 import { signupAction } from "../auth-actions";
 
-export default async function Page({ searchParams }: { searchParams: Promise<{ loi?: string }> }) {
-  const sp = await searchParams;
+// Trang form tĩnh: xem ghi chú ở trang đăng nhập (SearchFlash đọc ?loi=
+// phía client nên trang dựng tĩnh được, mở ngay từ CDN).
+export const dynamic = "force-static";
+
+export default function Page() {
   return (
     <AuthShell title="Tạo tài khoản chủ trọ" subtitle="Chủ trọ, chung cư mini: quản lý phòng, hóa đơn miễn phí và mở chợ cho cư dân.">
-      <Flash params={sp} />
+      <SearchFlash />
       <form action={signupAction} className="card space-y-3">
         <div>
           <label className="label" htmlFor="displayName">Tên của bạn</label>
