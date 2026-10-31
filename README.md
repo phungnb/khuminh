@@ -5,6 +5,15 @@ trong bán kính 1–20 km. **Quản lý nhà trọ là một module** (miễn p
 dùng từ các dãy trọ, chung cư: người thuê có sẵn tài khoản và vào chợ quanh khu của mình.
 Đặc tả gốc và kế hoạch: thư mục `khuminh/` trong project KhuMình (`dac-ta-goc/`, `KM-CHO_plan-v2.0.md`).
 
+## Công nghệ
+
+- **Next.js 15** (App Router, server actions) + **TypeScript** + **Tailwind 4** — giao diện.
+- **Postgres 16** + **Drizzle ORM** (driver `postgres`) — CSDL; local dùng Postgres, deploy dùng Neon (vùng Singapore).
+- **Vercel** — hosting (region `sin1` Singapore, gần DB Neon; xem `vercel.json`).
+- **Web Push** (khóa VAPID) — thông báo đẩy cho app người thuê.
+- **Vitest** — kiểm thử unit; kiểm thử DB và kiểm RLS chạy trên Postgres thật.
+- Đăng nhập chống brute-force: giới hạn 5 lần sai / 1 phút / (IP, tài khoản) — xem `src/server/rate-limit.ts`.
+
 ## Chợ quanh đây (giai đoạn 1)
 
 - Mở cho người đã có tài khoản: người thuê (qua link mời), chủ trọ, nhân viên. Đăng ký công khai bằng SĐT là giai đoạn 2.
@@ -43,9 +52,8 @@ dùng từ các dãy trọ, chung cư: người thuê có sẵn tài khoản và
 
 ## Kiến trúc
 
-- Next.js 15 (App Router, server actions), TypeScript, Tailwind 4.
-- Postgres 16 + Drizzle ORM. Tiền là số nguyên đồng (`bigint`), chỉ số đồng hồ là số nguyên phần trăm đơn vị.
 - `src/domain/`: hàm thuần (tính hóa đơn, phân bổ thanh toán, VietQR). Không chạm DB.
+  Tiền là số nguyên đồng (`bigint`), chỉ số đồng hồ là số nguyên phần trăm đơn vị.
 - `src/server/`: nghiệp vụ trên DB, kiểm tra quyền, ghi nhật ký.
 - `src/app/`: giao diện.
 
@@ -58,16 +66,32 @@ Kiểm thử `src/server/flow.db.test.ts` chứng minh chủ trọ B không đ�
 
 ## Chạy trên máy
 
+Biến môi trường (copy `.env.example` thành `.env.local` rồi điền):
+
+| Biến | Bắt buộc | Ý nghĩa |
+|---|---|---|
+| `DATABASE_URL` | có | Connection string của **tài khoản chủ bảng** (local: role postgres/khuminh_owner; Neon: owner). **Chỉ dùng khi chạy migration** (`npm run db:setup`, `db:migrate`, CI) — app không bao giờ dùng để phục vụ request. |
+| `DATABASE_URL_APP` | có* | Connection string của role `khuminh_app` (chịu RLS) — app dùng để phục vụ request. *Được bỏ trống nếu có `APP_DB_PASSWORD`: app tự ghép từ `DATABASE_URL`. |
+| `APP_DB_PASSWORD` | có* | Mật khẩu của role `khuminh_app` (ít nhất 16 chữ cái/số, không ký tự đặc biệt). Dùng khi tạo role (`db:setup`) và khi app tự ghép `DATABASE_URL_APP`. |
+| `APP_URL` | có | Địa chỉ công khai, để tạo link hóa đơn gửi người thuê. |
+| `VAPID_PUBLIC_KEY` | không | Thông báo đẩy cho app người thuê. Tạo bằng `npx web-push generate-vapid-keys`. |
+| `VAPID_PRIVATE_KEY` | không | (cùng bộ với trên) Thiếu thì app vẫn chạy, chỉ không có nút bật thông báo. |
+| `VAPID_SUBJECT` | không | (cùng bộ với trên, dạng `mailto:email-của-bạn`) |
+| `NEXT_PUBLIC_SUPPORT_CONTACT` | không | Kênh hỗ trợ hiện ở chân trang, điều khoản, riêng tư (Zalo/SĐT/email). Bỏ trống thì ẩn. |
+
 ```bash
 npm install
-# Postgres: tạo role chủ bảng và database, rồi role ứng dụng
+# Postgres: tạo role chủ bảng và database
 psql -U postgres -c "CREATE ROLE khuminh_owner LOGIN PASSWORD 'owner'"
-psql -U postgres -f scripts/create-app-role.sql
 psql -U postgres -c "CREATE DATABASE khuminh OWNER khuminh_owner"
-cp .env.example .env.local   # sửa mật khẩu
-DATABASE_URL=... npm run db:migrate
+cp .env.example .env.local   # điền DATABASE_URL (của chủ bảng), APP_DB_PASSWORD, APP_URL...
+# Tạo role khuminh_app + chạy migration + cấp quyền (dùng DATABASE_URL của CHỦ BẢNG, không phải app role):
+npm run db:setup
 npm run dev
 ```
+
+Lưu ý phân biệt: **migration luôn chạy bằng tài khoản chủ bảng** (`DATABASE_URL`);
+app khi chạy chỉ dùng role `khuminh_app` (`DATABASE_URL_APP`, chịu RLS).
 
 ## Đưa lên mạng (Vercel + Neon)
 
@@ -76,7 +100,11 @@ npm run dev
 3. Trước khi bấm Deploy, thêm Environment Variables:
    - `DATABASE_URL` = chuỗi kết nối Neon ở bước 1
    - `APP_DB_PASSWORD` = chuỗi ngẫu nhiên ít nhất 16 chữ cái/số (không ký tự đặc biệt)
-4. Deploy. Lệnh `vercel-build` tự tạo role `khuminh_app`, chạy migration, rồi build.
+4. Deploy. Lệnh `vercel-build` chỉ chạy `next build` (không chạm DB). Migration (tạo role
+   `khuminh_app`, chạy drizzle migrate, cấp quyền) chạy tự động qua GitHub Actions
+   (workflow `.github/workflows/migrate.yml`) mỗi khi merge vào `main` — cần thêm 2 secret
+   vào repo (Settings → Secrets and variables → Actions): `DATABASE_URL_OWNER`
+   (connection string của **tài khoản chủ bảng** Neon) và `APP_DB_PASSWORD`.
 5. Sau khi có tên miền, thêm `APP_URL` = `https://<tên>.vercel.app` và Redeploy để link hóa đơn dùng đúng địa chỉ.
 6. Thông báo đẩy (tùy chọn): chạy `npx web-push generate-vapid-keys` trên máy, thêm `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` (`mailto:email-của-bạn`) rồi Redeploy. Thiếu khóa thì app vẫn chạy, chỉ không có nút bật thông báo.
 
