@@ -37,9 +37,6 @@ function appDatabaseUrl(): string {
   return u.toString();
 }
 
-export function setDbForTests(db: Db | null): void {
-  cached = db;
-}
 
 export interface OrgContext {
   orgId: string;

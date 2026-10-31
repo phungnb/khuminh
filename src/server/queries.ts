@@ -290,37 +290,21 @@ export interface Dashboard {
   collected: number;
   outstanding: number;
   overdue: number;
-  expiring: Array<{ unitCode: string; tenantName: string; expiresOn: string }>;
 }
 
 export async function dashboard(actor: Actor, propertyId: string): Promise<Dashboard> {
   const t = today();
-  // Tổng quan phòng và tiền/sắp hết hạn không phụ thuộc nhau nên chạy song
-  // song (2 giao dịch riêng, 2 kết nối riêng); trước đây chạy nối tiếp.
+  // Tổng quan phòng và tiền không phụ thuộc nhau nên chạy song song
+  // (2 giao dịch riêng, 2 kết nối riêng); trước đây chạy nối tiếp.
   const [overview, rest] = await Promise.all([
     unitsOverview(actor, propertyId, t),
     withOrg(actor, async (tx) => {
       const money = (await propertyMoney(tx, [propertyId], t)).get(propertyId) ?? emptyMoney();
-      const expiring = await tx
-        .select({ unitCode: s.units.code, tenantName: s.tenants.fullName, expiresOn: s.leases.expiresOn })
-        .from(s.leases)
-        .innerJoin(s.units, eq(s.units.id, s.leases.unitId))
-        .innerJoin(s.tenants, eq(s.tenants.id, s.leases.tenantId))
-        .where(
-          and(
-            eq(s.units.propertyId, propertyId),
-            eq(s.leases.status, "active"),
-            isNull(s.leases.movedOutOn),
-            sql`${s.leases.expiresOn} is not null`,
-            lte(s.leases.expiresOn, addDays(t, 30)),
-          ),
-        )
-        .orderBy(asc(s.leases.expiresOn));
       const { receivable, collected } = money;
-      return { money, expiring };
+      return { money };
     }),
   ]);
-  const { money, expiring } = rest;
+  const { money } = rest;
   const { receivable, collected } = money;
   return {
     units: {
@@ -333,7 +317,6 @@ export async function dashboard(actor: Actor, propertyId: string): Promise<Dashb
     collected,
     outstanding: receivable - collected,
     overdue: money.overdue,
-    expiring: expiring.map((e) => ({ ...e, expiresOn: e.expiresOn! })),
   };
 }
 

@@ -71,10 +71,6 @@ export async function removeSubscription(userId: string, endpoint: string): Prom
     .where(and(eq(pushSubscriptions.userId, userId), eq(pushSubscriptions.endpoint, endpoint)));
 }
 
-export async function hasSubscription(userId: string): Promise<boolean> {
-  const [row] = await getDb().select({ id: pushSubscriptions.id }).from(pushSubscriptions).where(eq(pushSubscriptions.userId, userId)).limit(1);
-  return Boolean(row);
-}
 
 /** Gửi tới mọi thiết bị của các người dùng; lỗi không làm hỏng thao tác chính. */
 export async function sendToUsers(userIds: string[], msg: PushMessage): Promise<number> {
