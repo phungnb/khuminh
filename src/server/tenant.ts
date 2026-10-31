@@ -23,6 +23,7 @@ import {
 import { paymentState, type PaymentState } from "@/domain/payments";
 import { audit, requireOwner, UserError, type Actor } from "./audit";
 import { hashPassword, MIN_PASSWORD_LENGTH, normalizePhone, verifyPassword } from "./auth";
+import { assertLoginAllowed, clientIp, noteLoginFailure, noteLoginSuccess } from "./rate-limit";
 import { loadInvoiceView, hashToken, type PublicInvoice } from "./share";
 import { today } from "./queries";
 
@@ -151,9 +152,14 @@ export async function acceptTenantInvite(
   const [existing] = await db.select().from(users).where(eq(users.phone, phone));
   let userId: string;
   if (existing) {
+    // Người thuê đã có tài khoản: kiểm tra mật khẩu như một lần đăng nhập → chịu rate-limit.
+    const ip = await clientIp();
+    assertLoginAllowed(ip, phone);
     if (!existing.passwordHash || !(await verifyPassword(input.password, existing.passwordHash))) {
+      noteLoginFailure(ip, phone);
       throw new UserError("Số điện thoại này đã có tài khoản. Nhập đúng mật khẩu để thêm phòng vào tài khoản đó.");
     }
+    noteLoginSuccess(ip, phone);
     userId = existing.id;
   } else {
     if (input.password.length < MIN_PASSWORD_LENGTH) throw new UserError(`Mật khẩu cần ít nhất ${MIN_PASSWORD_LENGTH} ký tự`);

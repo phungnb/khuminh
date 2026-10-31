@@ -15,7 +15,7 @@ let cached: Db | null = null;
 export function getDb(): Db {
   if (cached) return cached;
   const url = appDatabaseUrl();
-  cached = drizzle(postgres(url, { max: 5, prepare: false }), { schema });
+  cached = drizzle(postgres(url, { max: 2, prepare: false }), { schema });
   return cached;
 }
 

@@ -7,6 +7,7 @@ import { getDb, withOrg } from "@/db/client";
 import { memberships, organizations, properties, propertyStaff, staffInvites, users } from "@/db/schema";
 import { audit, requireOwner, UserError, type Actor } from "./audit";
 import { hashPassword, verifyPassword } from "./auth";
+import { assertLoginAllowed, clientIp, noteLoginFailure, noteLoginSuccess } from "./rate-limit";
 import { hashToken } from "./share";
 
 export const STAFF_INVITE_TTL_DAYS = 7;
@@ -73,9 +74,14 @@ export async function acceptStaffInvite(
   const [existing] = await db.select().from(users).where(eq(users.email, email));
   let userId: string;
   if (existing) {
+    // Nhân viên đã có tài khoản: kiểm tra mật khẩu như một lần đăng nhập → chịu rate-limit.
+    const ip = await clientIp();
+    assertLoginAllowed(ip, email);
     if (!existing.passwordHash || !(await verifyPassword(input.password, existing.passwordHash))) {
+      noteLoginFailure(ip, email);
       throw new UserError("Email này đã có tài khoản. Nhập đúng mật khẩu để nhận lời mời.");
     }
+    noteLoginSuccess(ip, email);
     userId = existing.id;
   } else {
     if (!input.displayName.trim()) throw new UserError("Cần nhập tên");
