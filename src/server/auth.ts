@@ -7,6 +7,7 @@ import { and, eq, gt, isNull } from "drizzle-orm";
 import { getDb, withOrg, withUser } from "@/db/client";
 import { memberships, organizations, sessions, users } from "@/db/schema";
 import { UserError, type Actor } from "./audit";
+import { assertLoginAllowed, clientIp, noteLoginFailure, noteLoginSuccess } from "./rate-limit";
 
 const scrypt = promisify(scryptCb) as (pw: string, salt: Buffer, len: number) => Promise<Buffer>;
 export const SESSION_TTL_DAYS = 30;
@@ -70,14 +71,21 @@ export async function signUpOwner(input: {
   return { userId: user!.id, orgId };
 }
 
-/** Đăng nhập bằng email hoặc số điện thoại. */
+/** Đăng nhập bằng email hoặc số điện thoại. Chặn brute-force: tối đa 5 lần sai / 1 phút / (IP, tài khoản). */
 export async function signIn(login: string, password: string): Promise<{ userId: string; token: string } | null> {
+  const ip = await clientIp();
+  const identifier = login.includes("@") ? normalizeEmail(login) : (normalizePhone(login) ?? login.trim());
+  assertLoginAllowed(ip, identifier);
   const phone = login.includes("@") ? null : normalizePhone(login);
   const [user] = await getDb()
     .select()
     .from(users)
     .where(phone ? eq(users.phone, phone) : eq(users.email, normalizeEmail(login)));
-  if (!user?.passwordHash || !(await verifyPassword(password, user.passwordHash))) return null;
+  if (!user?.passwordHash || !(await verifyPassword(password, user.passwordHash))) {
+    noteLoginFailure(ip, identifier);
+    return null;
+  }
+  noteLoginSuccess(ip, identifier);
   // Chỉ báo khóa sau khi đúng mật khẩu: không lộ tài khoản nào tồn tại.
   if (user.lockedAt) throw new UserError(LOCKED_MESSAGE);
   return { userId: user.id, token: await createSession(user.id) };
