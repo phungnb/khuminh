@@ -12,7 +12,8 @@
     "test:db": "vitest run --config vitest.db.config.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx scripts/migrate.ts",
-    "vercel-build": "tsx scripts/setup-db.ts && next build",
+    "db:migrate:ci": "tsx scripts/setup-db.ts",
+    "vercel-build": "next build",
     "db:setup": "tsx scripts/setup-db.ts",
     "check:rls": "tsx scripts/check-rls.ts"
   },
