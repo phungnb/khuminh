@@ -98,16 +98,37 @@ export function assertLoginAllowed(ip: string, identifier: string, now: number =
   if (!allowed) throw new RateLimitError(retryAfterSec);
 }
 
-/** IP của client khi chạy trong server action/route (ưu tiên x-forwarded-for của Vercel). */
+/**
+ * IP của client khi chạy trong server action/route.
+ *
+ * Thứ tự ưu tiên (chống bypass rate-limit):
+ * 1. `x-real-ip` — do Vercel tự đặt, client không giả mạo được.
+ * 2. Phần tử CUỐI của `x-forwarded-for` — Vercel edge append IP thật vào cuối
+ *    chuỗi; các phần tử đầu do client gửi sẵn nên kẻ tấn công có thể ghi bừa
+ *    (lấy phần tử đầu sẽ cho mỗi request một key mới → rate-limit vô hiệu).
+ *
+ * Lưu ý: khi không có header nào, mọi request đều chung key "unknown" theo
+ * từng định danh (vẫn chặn theo định danh, nhưng không phân biệt được IP).
+ */
 export async function clientIp(): Promise<string> {
   const { headers } = await import("next/headers");
   const h = await headers();
+  const realIp = h.get("x-real-ip")?.trim();
+  if (realIp) return realIp;
   const xff = h.get("x-forwarded-for");
-  if (xff) return xff.split(",")[0]!.trim() || "unknown";
-  return h.get("x-real-ip")?.trim() || "unknown";
+  if (xff) {
+    const parts = xff.split(",").map((p) => p.trim()).filter(Boolean);
+    if (parts.length > 0) return parts[parts.length - 1]!;
+  }
+  return "unknown";
 }
 
 /** Chỉ dùng trong test: xoá toàn bộ bộ đếm. */
 export function __resetLoginAttempts(): void {
   attempts.clear();
+}
+
+/** Chỉ dùng trong test: số mục hiện có trong bộ đếm (để kiểm chứng prune). */
+export function __loginAttemptCount(): number {
+  return attempts.size;
 }
