@@ -28,6 +28,3 @@ export function roundTo(amount: Dong, step: number): Dong {
   return divRound(amount, step) * step;
 }
 
-export function formatVnd(amount: Dong): string {
-  return `${amount.toLocaleString("vi-VN")}đ`;
-}

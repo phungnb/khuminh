@@ -60,9 +60,8 @@ Kiểm thử `src/server/flow.db.test.ts` chứng minh chủ trọ B không đ�
 
 ```bash
 npm install
-# Postgres: tạo role chủ bảng và database, rồi role ứng dụng
+# Postgres: tạo role chủ bảng và database (role ứng dụng khuminh_app do `npm run db:setup` tạo)
 psql -U postgres -c "CREATE ROLE khuminh_owner LOGIN PASSWORD 'owner'"
-psql -U postgres -f scripts/create-app-role.sql
 psql -U postgres -c "CREATE DATABASE khuminh OWNER khuminh_owner"
 cp .env.example .env.local   # sửa mật khẩu
 DATABASE_URL=... npm run db:migrate

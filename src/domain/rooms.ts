@@ -1,5 +1,7 @@
 // Suy tầng và trạng thái ô phòng cho sơ đồ tầng. Thuần, không chạm DB.
 
+import { addDays } from "./dates";
+
 /**
  * Tầng của phòng: ưu tiên cột floor; trống thì suy từ mã phòng dạng
  * 101, 1203 (2 số cuối là số phòng, phần đầu là tầng). Mã không theo
@@ -32,7 +34,7 @@ export function roomStatus(
   if (!o.lease) return "trong";
   if (o.overdue) return "no";
   if (o.lease.expiresOn && o.lease.expiresOn < t) return "het-han";
-  if (o.lease.expiresOn && o.lease.expiresOn <= addDaysIso(t, expiringWithinDays)) return "sap-het-han";
+  if (o.lease.expiresOn && o.lease.expiresOn <= addDays(t, expiringWithinDays)) return "sap-het-han";
   return "thue";
 }
 
@@ -45,12 +47,6 @@ export const ROOM_STATUS_LABEL: Record<RoomStatus, string> = {
   no: "Nợ",
 };
 
-/** Cộng ngày vào ngày ISO (YYYY-MM-DD), không lệ thuộc múi giờ máy. */
-export function addDaysIso(d: string, days: number): string {
-  const [y = 1970, m = 1, day = 1] = d.split("-").map(Number);
-  const dt = new Date(Date.UTC(y, m - 1, day + days));
-  return dt.toISOString().slice(0, 10);
-}
 
 /** Gom phòng theo tầng, tầng tăng dần, nhóm chưa xếp tầng ở cuối. */
 export function groupRoomsByFloor<R extends { code: string; floor: number | null }>(
