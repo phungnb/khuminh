@@ -1,5 +1,6 @@
 import Link from "next/link";
 import SubmitButton from "@/components/submit-button";
+import ConfirmButton from "@/components/confirm-button";
 import { notFound } from "next/navigation";
 import { ChevronDown } from "lucide-react";
 import { Badge, Empty, Flash, PageTitle } from "@/components/ui";
@@ -83,7 +84,7 @@ export default async function Page({
             {drafts.map((d) => (
               <input key={d.invoice!.id} type="hidden" name="invoiceId" value={d.invoice!.id} />
             ))}
-            <SubmitButton>Phát hành {drafts.length} hóa đơn</SubmitButton>
+            <ConfirmButton title={`Phát hành ${drafts.length} hóa đơn?`} message="Các hóa đơn sẽ được gửi cho người thuê ngay, không còn là nháp nữa.">Phát hành {drafts.length} hóa đơn</ConfirmButton>
           </form>
         ) : null}
         {issued.length ? (
@@ -217,7 +218,7 @@ function RoomRow({
                     {hidden}
                     <input type="hidden" name="leaseId" value={r.leaseId} />
                     <input type="hidden" name="invoiceId" value={r.invoice.id} />
-                    <SubmitButton>Phát hành phòng này</SubmitButton>
+                    <ConfirmButton title="Phát hành hóa đơn phòng này?" message="Hóa đơn sẽ được gửi cho người thuê ngay, không còn là nháp nữa.">Phát hành phòng này</ConfirmButton>
                   </form>
                   <form action={deleteDraftInvoiceAction}>
                     {hidden}

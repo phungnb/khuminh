@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import SubmitButton from "@/components/submit-button";
+import ConfirmButton from "@/components/confirm-button";
 import { CopyBox } from "@/components/copy-box";
 import LocationPicker from "@/components/location-picker";
 import { Flash, PageTitle } from "@/components/ui";
@@ -177,7 +178,7 @@ export default async function Page({
                   <form action={removeStaffAction}>
                     <input type="hidden" name="propertyId" value={id} />
                     <input type="hidden" name="userId" value={m.userId} />
-                    <SubmitButton className="btn-danger">Bỏ</SubmitButton>
+                    <ConfirmButton className="btn-danger" title="Gỡ nhân viên này?" message="Nhân viên sẽ không vào được khu này nữa, dữ liệu cũ của khu vẫn giữ nguyên.">Bỏ</ConfirmButton>
                   </form>
                 </li>
               ))}
@@ -221,7 +222,7 @@ export default async function Page({
                 </label>
                 <input className="input" id="confirmName" name="confirmName" autoComplete="off" required />
               </div>
-              <SubmitButton className="btn-danger">Xóa hẳn khu</SubmitButton>
+              <ConfirmButton className="btn-danger" title="Xóa hẳn khu này?" message="Khu sẽ mất luôn cùng phòng, đồng hồ, chỉ số, biểu phí, nhân viên và bảng tin. Không hoàn tác được.">Xóa hẳn khu</ConfirmButton>
             </form>
           ) : (
             <form action={archivePropertyAction} className="space-y-3">

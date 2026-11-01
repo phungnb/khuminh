@@ -1,4 +1,5 @@
 import Link from "next/link";
+import ConfirmButton from "@/components/confirm-button";
 import { notFound } from "next/navigation";
 import { EmptyState, Flash, Logo, Stat } from "@/components/ui";
 import { ago } from "@/components/listing-card";
@@ -79,9 +80,13 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ l
                     <input type="hidden" name="userId" value={r.authorUserId} />
                     <input type="hidden" name="locked" value={r.authorLocked ? "0" : "1"} />
                     {r.authorLocked ? null : <input className="input h-10 min-w-0 flex-1 text-sm" name="reason" placeholder="Lý do khóa" required maxLength={300} />}
-                    <button className={r.authorLocked ? "btn-secondary text-sm" : "btn-danger text-sm"}>
-                      {r.authorLocked ? `Mở khóa ${r.authorName}` : "Khóa người đăng"}
-                    </button>
+                    {r.authorLocked ? (
+                      <button className="btn-secondary text-sm">{`Mở khóa ${r.authorName}`}</button>
+                    ) : (
+                      <ConfirmButton className="btn-danger text-sm" title="Khóa người đăng này?" message="Người này sẽ bị đăng xuất trên mọi thiết bị, các tin đang mở của họ sẽ bị ẩn. Mở khóa sau này không tự hiện lại tin.">
+                        Khóa người đăng
+                      </ConfirmButton>
+                    )}
                   </form>
                 </div>
               </li>
