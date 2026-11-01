@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import SubmitButton from "@/components/submit-button";
+import ConfirmButton from "@/components/confirm-button";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CopyBox } from "@/components/copy-box";
@@ -175,14 +176,14 @@ export default async function Page({
                 <input type="hidden" name="back" value={back} />
                 <input type="hidden" name="paymentId" value={p.payment.id} />
                 <input className="input flex-1" name="reason" placeholder="Lý do hủy thanh toán" required />
-                <SubmitButton className="btn-danger">Hủy khoản thu {vnd(p.payment.amount)}</SubmitButton>
+                <ConfirmButton className="btn-danger" title="Hủy khoản thu này?" message="Khoản thu đã ghi sẽ bị hủy, lý do đã nhập sẽ được lưu lại.">Hủy khoản thu {vnd(p.payment.amount)}</ConfirmButton>
               </form>
             ))}
             <form action={voidInvoiceAction} className="flex flex-wrap items-end gap-2">
               <input type="hidden" name="back" value={back} />
               <input type="hidden" name="invoiceId" value={invoiceId} />
               <input className="input flex-1" name="reason" placeholder="Lý do hủy hóa đơn" required />
-              <SubmitButton className="btn-danger">Hủy hóa đơn</SubmitButton>
+              <ConfirmButton className="btn-danger" title="Hủy hóa đơn này?" message="Hóa đơn sẽ bị hủy, lý do đã nhập sẽ được lưu lại.">Hủy hóa đơn</ConfirmButton>
             </form>
           </section>
         </div>

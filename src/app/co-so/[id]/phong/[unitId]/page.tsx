@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import SubmitButton from "@/components/submit-button";
+import ConfirmButton from "@/components/confirm-button";
 import { CopyBox } from "@/components/copy-box";
 import { Flash, PageTitle } from "@/components/ui";
 import { dmy, vnd } from "@/lib/format";
@@ -163,7 +164,7 @@ export default async function Page({
               <label className="label">Ngày ở cuối cùng</label>
               <input className="input" type="date" name="lastDay" defaultValue={today()} required />
             </div>
-            <SubmitButton className="btn-danger">Ghi nhận chuyển đi</SubmitButton>
+            <ConfirmButton className="btn-danger" title="Ghi nhận chuyển đi?" message="Hợp đồng sẽ kết thúc từ ngày ở cuối cùng đã chọn, và hóa đơn nháp của kỳ đó sẽ được tính lại.">Ghi nhận chuyển đi</ConfirmButton>
           </form>
           <p className="text-xs text-fg-subtle">
             Khi chuyển đi: ghi chỉ số điện nước ngày đó, lập hóa đơn cuối ở màn Tính tiền, rồi quyết toán cọc ngay tại trang này.
@@ -251,7 +252,7 @@ export default async function Page({
                   <form action={deleteVehicleAction}>
                     {hidden}
                     <input type="hidden" name="vehicleId" value={v.id} />
-                    <SubmitButton className="btn-danger">Xóa</SubmitButton>
+                    <ConfirmButton className="btn-danger" title="Xóa xe này?" message="Xe sẽ mất khỏi danh sách xe của phòng.">Xóa</ConfirmButton>
                   </form>
                 ) : null}
               </li>
@@ -315,7 +316,7 @@ export default async function Page({
           </p>
           <form action={deleteUnitAction}>
             {hidden}
-            <SubmitButton className="btn-danger">Xóa phòng này</SubmitButton>
+            <ConfirmButton className="btn-danger" title="Xóa phòng này?" message="Chỉ xóa được phòng trống, nhưng đã xóa thì không khôi phục được.">Xóa phòng này</ConfirmButton>
           </form>
         </section>
       ) : null}
@@ -404,7 +405,7 @@ async function Settlement(props: { actor: Actor; propertyId: string; unitId: str
                 <label className="label">Lý do hủy</label>
                 <input className="input" name="reason" required />
               </div>
-              <SubmitButton className="btn-danger">Hủy quyết toán</SubmitButton>
+              <ConfirmButton className="btn-danger" title="Hủy quyết toán cọc?" message="Quyết toán cọc sẽ bị hủy, cần lập lại nếu cần. Lý do hủy đã nhập sẽ được lưu lại.">Hủy quyết toán</ConfirmButton>
             </form>
           </details>
         ) : null}

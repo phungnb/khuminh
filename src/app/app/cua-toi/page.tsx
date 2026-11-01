@@ -1,5 +1,6 @@
 import Link from "next/link";
 import SubmitButton from "@/components/submit-button";
+import ConfirmButton from "@/components/confirm-button";
 import { Heart, Megaphone } from "lucide-react";
 import { ago, ListingCard, ListingGrid } from "@/components/listing-card";
 import { EmptyState, Flash } from "@/components/ui";
@@ -49,7 +50,7 @@ function DeleteForm({ l, backTo }: { l: ListingRow; backTo: string }) {
         <input type="hidden" name="listingId" value={l.id} />
         <input type="hidden" name="back" value={backTo} />
         <p className="mb-2 text-xs text-fg-muted">Xoá vĩnh viễn tin này cùng lượt quan tâm và báo cáo kèm theo. Không khôi phục được.</p>
-        <SubmitButton className="btn-danger w-full">Xoá vĩnh viễn</SubmitButton>
+        <ConfirmButton className="btn-danger w-full" title="Xoá hẳn tin này?" message="Tin, lượt quan tâm và báo cáo kèm theo sẽ mất luôn, không khôi phục được.">Xoá vĩnh viễn</ConfirmButton>
       </form>
     </details>
   );
@@ -191,7 +192,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ t
                               <input type="hidden" name="interestId" value={i.id} />
                               <input type="hidden" name="decision" value="accept" />
                               <input type="hidden" name="back" value="/app/cua-toi" />
-                              <SubmitButton>Đồng ý chia sẻ SĐT</SubmitButton>
+                              <ConfirmButton title="Chia sẻ số điện thoại?" message="Hai bên sẽ thấy số điện thoại/Zalo của nhau. Sau khi chia sẻ thì không thu lại được.">Đồng ý chia sẻ SĐT</ConfirmButton>
                             </form>
                             <form action={decideInterestAction}>
                               <input type="hidden" name="listingId" value={listing.id} />

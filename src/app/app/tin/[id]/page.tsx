@@ -1,5 +1,6 @@
 import Link from "next/link";
 import SubmitButton from "@/components/submit-button";
+import ConfirmButton from "@/components/confirm-button";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Clock, Flag, MapPin, Phone, Tag } from "lucide-react";
 import { CategoryTile } from "@/components/category";
@@ -186,7 +187,7 @@ export default async function Page({
                     {hidden}
                     <input type="hidden" name="interestId" value={i.id} />
                     <input type="hidden" name="decision" value="accept" />
-                    <SubmitButton>Đồng ý chia sẻ SĐT</SubmitButton>
+                    <ConfirmButton title="Chia sẻ số điện thoại?" message="Hai bên sẽ thấy số điện thoại/Zalo của nhau. Sau khi chia sẻ thì không thu lại được.">Đồng ý chia sẻ SĐT</ConfirmButton>
                   </form>
                   <form action={decideInterestAction}>
                     {hidden}
